@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>页面渲染阻塞</title>
+</head>
+<body>
+<div>解释脚本前</div>
+<script>
+    for (let i = 0; i < 10000000000; i++) {}
+</script>
+<div>解释脚本后</div>
+</body>
+</html>

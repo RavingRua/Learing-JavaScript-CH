@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>defer</title>
+    <script defer src="js/例1.js"></script>
+    <script defer src="js/例2.js"></script>
+    <script defer src="js/例3.js"></script>
+</head>
+<body>
+<script>
+    window.addEventListener('load', () => {
+        console.log('加载页面');
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+        console.log('页面解析完毕');
+    });
+</script>
+</body>
+</html>

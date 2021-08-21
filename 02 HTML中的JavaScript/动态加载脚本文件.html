@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>动态加载</title>
+    <!-- 告知预加载器存在动态请求文件 -->
+    <link href="js/例1.js" rel="prefetch">
+</head>
+<body>
+<script>
+    const script = document.createElement('script');
+    script.src = 'js/例1.js';
+    script.async = false;           // 默认为true
+    document.head.appendChild(script);
+</script>
+</body>
+</html>
