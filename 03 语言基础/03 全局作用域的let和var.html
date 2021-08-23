@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>全局变量</title>
+</head>
+<body>
+<script>
+    // let 声明的变量不会被挂载到 window 对象上，但 var 会
+
+    let v1 = 10;
+    var v2 = 20;
+    console.log(window.v1);         // undefined
+    console.log(window.v2);         // 20
+</script>
+</body>
+</html>

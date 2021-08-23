@@ -1,0 +1,9 @@
+console.log('\n');              // 换行
+console.log('\t');              // 制表位
+console.log('\b');              // 退格
+console.log('\r');              // 回车
+console.log('\f');              // 翻页
+console.log('\\');              // 反斜杠
+console.log('\'');              // 引号
+console.log('\x41');            // 十六进制
+console.log('\u03a3');          // Unicode字符
