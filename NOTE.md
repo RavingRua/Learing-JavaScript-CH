@@ -908,7 +908,7 @@ ES 7 标准提出了指数二元操作符双星号`**`，代替原来的`Math.po
 ```js
 console.log(Math.pow(3, 2)); 		// 9
 console.log(3 ** 2); 				// 9
-console.log(Math.pow(16, 0.5)); 		// 4
+console.log(Math.pow(16, 0.5)) ; 		// 4
 console.log(16** 0.5); 				// 4
 ```
 
@@ -997,3 +997,83 @@ let num1 = 1, num2 = 2, num3 = 3;
 let num = (5, 1, 4, 8, 0); // 0
 ```
 
+### 流程控制语句
+
++ if：常用的判断语句
++ do-while：至少会执行一次的循环语句
++ while：循环语句
++ for：循环语句
++ for-in：严格迭代语句，用于遍历**可枚举**对象中的**非符号键**属性，获取**键的值**，由于对象属性排列是无序的，在不同的运行环境中不一定能保证返回的键的顺序是一致的，一般用于遍历**对象**类型
+
+```js
+let obj = {
+    name: 'obj',
+    type: 'Object',
+    [Symbol('value')]: 10
+};
+
+for (const key in obj) {
+    console.log(key);           
+    // name
+    // type
+    console.log(obj[key]);      
+    // 'obj'
+    // 'Object'
+}
+```
+
++ for-of：严格迭代语句，用于遍历**可迭代**对象的元素，获取的是**元素值**，一般用于数组等：
+
+```js
+let arr = ['foo', 'bar', 'baz'];
+
+for (const value of arr) {
+    console.log(value);
+    // foo
+    // bar
+    // baz
+}
+```
+
++ for-await-of：于 ES 7 提出，用于遍历生成期约的可迭代对象
++ 标签语句：用于给语句加上标签，可以用于嵌套循环等复杂的大段代码块中，用于标识代码块作用：
+
+```js
+loop1: for (let i = 0; i < 10; i++) {
+    console.log(i);
+    loop2: for (let j = 0; j < 10; j++) {
+        console.log(j);
+        loop3: for (let k = 0; k < 10; k++) {
+            console.log(k);
+        }
+    }
+}
+
+// 另一种用法是类似于 C 中 goto 语句的目的地，在 ECMAScript 中配合 continue 和 break 同样可以实现类似效果，不建议使用。
+```
+
++ with：用于设置一块代码区域为特点的对象作用域，**不建议使用**，严格模式下使用 with 会抛出错误：
+
+```js
+let qs = location.search.substring(1);
+let hostName = location.hostname;
+let url = location.href;
+
+with(location) {
+    let qs = search.substring(1);
+    let hostName = hostname;
+    let url = href;
+}
+```
+
++ switch：选择判断语句，和其他的一些语言不同，ES 中的 case 可以使用**任何类型的值**
+
+> ECMAScript 包含7种数据类型：Undefined、Null、Boolean、Number、String、Symbol 和 Object
+>
+> Null 类型的特殊值 null 表示指向一个空对象
+>
+> Number 类型不区分浮点数和整数，以64位双精度方式在内存中存储，以32位方式运算
+>
+> Object 是复杂数据类型，是所有对象的基类
+>
+> 没有指定返回值的函数将返回 undefined
