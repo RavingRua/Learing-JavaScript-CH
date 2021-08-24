@@ -906,9 +906,9 @@ console.log(-64 >>> 5);     // 134217726
 ES 7 标准提出了指数二元操作符双星号`**`，代替原来的`Math.pow()`方法。
 
 ```js
-console.log(Math.pow(3, 2); 		// 9
+console.log(Math.pow(3, 2)); 		// 9
 console.log(3 ** 2); 				// 9
-console.log(Math.pow(16, 0.5); 		// 4
+console.log(Math.pow(16, 0.5)); 		// 4
 console.log(16** 0.5); 				// 4
 ```
 
