@@ -6,7 +6,7 @@
 
 ## 01 什么是 JavaScript
 
-## JavaScript实现
+### JavaScript实现
 
 完整的JavaScript包括：
 
@@ -16,7 +16,7 @@
 
 另外常见的 ECMAScript 宿主环境还有 NodeJS 和 Adobe Flash（已淘汰）。
 
-### ECMAScript
+#### ECMAScript
 
 ECMAScript 已经经历了多个版本标准的迭代，被设计为一种**平台无关**编程语言。
 
@@ -30,15 +30,15 @@ ECMAScript 定义了：
 + 操作符
 + 全局对象
 
-#### 关于 ES6
+##### 关于 ES6
 
 ECMAScript 第六版，俗称 ES6、ES2015，于2015年6月发布，是有史以来最重要的一次 ES 特性增强，包括了类、模块（ES Module）、迭代器、生成器、箭头函数（Lambda表达式）、期约、反射、代理和众多数据类型。
 
-#### ESNEXT
+###### ESNEXT
 
 ECMAScript 标准还在不断完善中，截至 2021年6月22日，ECMA 已有12版标准。
 
-### DOM
+#### DOM
 
 文档对象模型（DOM，Document Object Model）是一个应用编程接口（API），用于在 HTML 中使用拓展的 XML。DOM 会创建表示HTML文档的节点树，通过 ECMAScript 控制网页的内容和结构。
 
@@ -49,7 +49,7 @@ DOM 标准由万维网联盟（W3C，World Wide WebConsortium）制定。DOM 包
 
 支持 DOM 对于浏览器尝试而言是重中之重。
 
-#### 其他 DOM
+##### 其他 DOM
 
 除了 DOM Core 和 HTML，其他的一些基于 XML 的语言也有属于自己的 DOM，以下语言同样是 W3C 推荐标准：
 
@@ -57,7 +57,7 @@ DOM 标准由万维网联盟（W3C，World Wide WebConsortium）制定。DOM 包
 + 数学标记语言 MathML
 + 同步多媒体开发语言 SMIL
 
-### BOM
+#### BOM
 
 浏览器会提供浏览器对象模型（BOM） API，用于支持访问和操作浏览器的窗口。与 ECMAScript 和 DOM 不同，BOM 没有相关标准。而 HTML5 的出现解决了这个问题，HTML5 以正式规范的形式涵盖了尽可能多的BOM 特性，目前各大浏览器的 BOM 实现细节正日趋一致。
 
@@ -352,6 +352,23 @@ console.log(0.1 + 0.2);                         // 0.30000000000000004
 // 比较浮点数
 const EPSILON = 1e-17;
 if (0.3 - (0.1 + 0.2) < EPSILON) console.log(true);
+```
+
+ES 会尽可能地将 Number 类型作为整数存储和操作，因此一些不必要的浮点数字面量会被转换为整数：
+
+```js
+console.log(Number.isInteger(1)); 		// true
+console.log(Number.isInteger(1.00)); 	// true
+console.log(Number.isInteger(1.01)); 	// false
+```
+
+IEEE 754 双精度浮点表示法规定在一定范围内的数值可以使用整数表示。这个数值范围从Number.MIN_SAFE_INTEGER（-2^53+1^）到Number.MAX_SAFE_INTEGER（2^53-1^），使用全局 Number 对象的方法`isSafeInteger()`可以判断一个数值是否为安全整数（可以存储为二进制整数）：
+
+```js
+console.log(Number.isSafeInteger(-1 * (2 ** 53))); // false
+console.log(Number.isSafeInteger(-1 * (2 ** 53) + 1)); // true
+console.log(Number.isSafeInteger(2 ** 53)); // false
+console.log(Number.isSafeInteger((2 ** 53) - 1)); // true
 ```
 
 ##### 值范围
@@ -1450,3 +1467,649 @@ vectorList.push(vector);
 >
 > 静态操作可以提高运行效率，减少垃圾回收次数，使用 null 值代替 delete 操作
 
+---
+
+## 05 基本引用类型
+
+**引用值**是某个特定引用类型的**实例**。ECMAScript 中的引用类型是把数据和功能组织在一起的结构，这与面向对象方法中的**类**很相似，但 ECMAScript 中实际上并没有类的存在。引用类型有时也被称为**对象定义**。
+
+在 ES 中，一个实例通过 new 关键字和一个**构造函数（constructor）**来实例化。
+
+### Date
+
+Date 类型将日期保存为**自协调世界时（UTC，Universal Time Coordinated）**，为1970年1月1日0时至今的**毫秒数**，最多表示1970年之后285616年的时间。
+
+构造函数`Date()`可以接收一个参数，单位为毫秒的 Number 类型。在不传入参数的情况下默认存储当前时间。
+
+#### 常用方法
+
++ `Date.parse()`：接收一个表示时间的字符串，支持`月/日/年`、ISO 8601时间格式等形式的字符串。如果解析失败返回 NaN
++ `Date.UTC()`：接收一组参数，接收年、月（从0开始为1）、日（从1开始）、时、分、秒和毫秒。年和月是必选参数，解析失败返回 NaN
+
+构造函数在接收非 Number 类型参数时会尝试调用 parse 和 UTC 方法解析。
+
+#### 继承的方法
+
+Date 类型重写了以下方法：
+
++ `toLocalString()`：返回与浏览器运行的本地环境一致的日期和时间
++ `toString()`：返回格林尼治时间字符串
++ `valueOf()`：返回1970.1.1至今毫秒数
+
+#### 日期格式化方法
+
++ `toDateString()`：显示日期中的周几、月、日、年（格式特定于实现）
++ `toTimeString()`：显示日期中的时、分、秒和时区（格式特定于实现）
++ `toLocaleDateString()`：显示日期中的周几、月、日、年（格式特定于实现和地区）
++ `toLocaleTimeString()`：显示日期中的时、分、秒（格式特定于实现和地区）
++ `toUTCString()`：显示完整的UTC 日期（格式特定于实现）
+
+### RegExp
+
+ES 支持正则表达式，可以通过字面量创建一个 RegExp 对象。
+
+#### 标记
+
+正则对象可以带 flag（标记），设置的标记可以使用 flags 方法查询。
+
++ g：全局模式，表示查找字符串的全部内容，而不是找到第一个匹配的内容就结束
++ i：不区分大小写，表示在查找匹配时忽略pattern 和字符串的大小写
++ m：多行模式，表示查找到一行文本末尾时会继续查找。
++ y：粘附模式，表示只查找从lastIndex 开始及之后的字符串
++ u：Unicode 模式，启用Unicode 匹配
++ s：dotAll 模式，表示元字符.匹配任何字符（包括\n 或\r）
+
+#### 实例属性
+
++ global：布尔值，表示是否设置了g 标记。
++ ignoreCase：布尔值，表示是否设置了i 标记。
++ unicode：布尔值，表示是否设置了u 标记。
++ sticky：布尔值，表示是否设置了y 标记。
++ lastIndex：整数，表示在源字符串中下一次搜索的开始位置，始终从0 开始。非全局模式始终不变
++ multiline：布尔值，表示是否设置了m 标记。
++ dotAll：布尔值，表示是否设置了s 标记。
++ source：正则表达式的字面量字符串（不是传给构造函数的模式字符串），没有开头和结尾的斜杠
++ flags：正则表达式的标记字符串。始终以字面量而非传入构造函数的字符串模式形式返回（没有前后斜杠）
+
+#### 常用实例方法
+
++ exec：应用正则，接收一个参数作为要应用正则的字符串，返回包含第一个匹配信息的数组，该数组包含所有查询到的匹配模式的字符串，以及额外的 index（查询到的第一个字符串的起始下标） 与 input（输入的字符串） 属性，如果是全局查找只返回第一个字符串的 index
++ test：应用正则，接收一个字符串，如果字符串包含模式则返回 true
+
+### 原始值包装类型
+
+ES 中提供三种特殊的引用类型 Boolean、Number 和 String 来包装原始值。在使用字面量初始化包含原始值变量时，ES 会为这些原始值自动用对应类型的对象包装，从而实现在原始值上调用方法。
+
+原始值包装类型对象的声明期仅在使用它的语句范围内。当语句结束后，对象就被销毁了，因此在原始值上添加属性是无效的：
+
+```js
+let str1 = 'str1';
+console.log(typeof str1);               // 'string'
+console.log(str1.substring(0, 3));      // 'str'
+str1.name = '1';                        // str1是新创建的一个原始值包装类型对象，语句结束后销毁
+console.log(str1.name);                 // undefined，调用str1再次创建一个对象，该对象没有默认的name属性
+```
+
+可以显式使用 Boolean、Number 和 String 构造函数创建原始值包装对象，生成的实例具有引用类型的特性：
+
+```js
+let str2 = new String('str2');		    // 不使用new则是调用转型函数
+console.log(typeof str2);               // 'object'
+str2.name = '2';
+console.log(str2.name);                 // '2'
+```
+
+一般不会显式调用这些构造函数，如果必须要使用，需要注意：
+
++ 生成的实例是引用类型值，typeof 将返回 `'object'`
++ 在判断语句中，如果引用类型值要被转为 Boolean 类型值，将返回 true，对于一个值为 false 的引用类型 Boolean 对象，判断时依旧返回 true ，这在语句中可能导致阅读歧义。不建议生成一个引用类型为 Boolean 的实例
+
+#### 字符串方法
+
+String 类型拥有几个常用的方法。
+
+##### concat 连接
+
+`concat()`用于拼接多个字符串，接收任意数量字符串类型参数，返回拼接的结果：
+
+```js
+let stringValue = "hello ";
+let result = stringValue.concat("world", "!");
+console.log(result); 		// "hello world!"
+console.log(stringValue); 	// "hello"
+```
+
+一般使用更方便的`+`操作符替代。
+
+##### slice 截取范围
+
+截取字符串部分。接收一个或两个参数，第一个参数为起始位置下标，第二个为结束位置下标（不包括下标位置的字符串，截取该位置前的内容，默认截取至结尾）。**参数为负数时**，参数与字符串长度相加后输入，即对于第一个参数而言，负数代表从倒数第几位开始截取。
+
+##### substring 截取范围
+
+截取字符串部分。接收一个或两个参数，第一个参数为起始位置下标，第二个为结束位置下标（不包括下标位置的字符串，截取该位置前的内容，默认截取至结尾）。**参数为负数时**，转化为0。
+
+##### substr 截取数量
+
+截取字符串部分。接收一个或两个参数，第一个参数为起始位置下标，第二个参数为截取后字符串长度（默认截取全部剩余）。**参数为负数时**，第一个参数与字符串长度相加后输入，即对于第一个参数而言，负数代表从倒数第几位开始截取，第二个参数会转换为0，截取0长度的字符串。
+
+```js
+let stringValue = "hello world";
+console.log(stringValue.slice(3)); 			// "lo world"
+console.log(stringValue.substring(3)); 		// "lo world"
+console.log(stringValue.substr(3)); 		// "lo world"
+console.log(stringValue.slice(3, 7)); 		// "lo w"
+console.log(stringValue.substring(3,7)); 	// "lo w"
+console.log(stringValue.substr(3, 7)); 		// "lo worl"
+console.log(stringValue.slice(-3)); 		// "rld"
+console.log(stringValue.substring(-3)); 	// "hello world"
+console.log(stringValue.substr(-3)); 		// "rld"
+console.log(stringValue.slice(3, -4)); 		// "lo w"
+console.log(stringValue.substring(3, -4)); 	// "hel"
+console.log(stringValue.substr(3, -4)); 	// "" (empty string)
+```
+
+##### indexOf 和 lastIndexOf 查找子串位置
+
+`indexOf()`获取第一个给定子字符串出现的位置，找到则返回第一个出现的子字符串第一个字符的下标，没有找到返回 -1。`lastIndexOf()`为反向查找：
+
+```js
+let stringValue = "hello world";
+console.log(stringValue.indexOf("o")); 		// 4
+console.log(stringValue.lastIndexOf("o")); 	// 7
+```
+
+可以接收第二个参数，用于指定开始查找的位置：
+
+```js
+let stringValue = "hello world";
+console.log(stringValue.indexOf("o", 6)); 		// 7
+console.log(stringValue.lastIndexOf("o", 6)); 	// 4
+```
+
+查找所有子字符串位置算法：
+
+```js
+function findAllIndex(string, target) {
+    let positions = [];
+    let pos = string.indexOf(target);
+    while(pos > -1) {
+        positions.push(pos);
+        pos = stringValue.indexOf(target, pos + 1);
+    }
+
+    return positions;
+}
+```
+
+##### includes 确认是否存在子串
+
+确认字符串中是否存在给定子字符串。第一个参数接收给定的字符串，第二个可选参数接收开始查找的位置。如果存在返回 true：
+
+```js
+let message = "foobarbaz";
+console.log(message.includes("bar")); // true
+console.log(message.includes("qux")); // false
+```
+
+##### startsWith
+
+确认从给定索引位置开始的子字符串是否匹配给定字符串。第一个参数接收给定的字符串，第二个可选参数接收开始查找的位置，默认为0：
+
+```js
+let message = "foobarbaz";
+console.log(message.startsWith("foo")); // true
+console.log(message.startsWith("foo", 1)); // false
+```
+
+##### endsWith
+
+确认从索引位置（string.length - substring.length）开始的子字符串是否匹配给定字符串。第一个参数接收给定字符串，第二个可选参数接收指定的末尾位置（即将字符串当作在该位置结尾），默认为字符串长度：
+
+```js
+let message = "foobarbaz";
+console.log(message.endsWith("bar")); // false
+console.log(message.endsWith("bar", 6)); // true
+```
+
+##### trim 删除首尾空格
+
+用于去除字符串首尾全部空格，不包括内部空格。`trimStart()`和`trimEnd()`用于去除首或尾空格。
+
+##### repeat 重复字符串内容
+
+重复字符串内容并拼接，返回拼接结果：
+
+```js
+let stringValue = "na ";
+console.log(stringValue.repeat(16) + "batman");
+// na na na na na na na na na na na na na na na na batman
+```
+
+##### padStart 和 padEnd
+
+`padStart()` 在字符串起始位置添加给定数量的给定字符串，`padEnd()`从尾部开始重复。第一个参数为重复次数，第二个参数为重复的字符串，默认为空格。
+
+##### replace 替换内容
+
+去除字符串中与第一个给定字符串相同字符串，并用指定的内容替换。第一个参数为要删除的字符串，第二个参数为要替代的字符串：
+
+```js
+const p = 'The quick brown fox jumps over the lazy dog. If the dog reacted, was it really lazy?';
+console.log(p.replace('dog', 'monkey'));
+// "The quick brown fox jumps over the lazy monkey. If the dog reacted, was it really lazy?"
+```
+
+ES 2021 提出的`replaceAll()`方法可以替代目标字符串中的所有子字符串。
+
+##### toLowerCase 和 toUpperCase
+
+分别用于大小写转换。
+
+##### split 分隔子串
+
+用一个给定的字符串作分隔标准，返回字符串分隔后的结果数组。第一个参数为分隔标准，第二个可选参数为最大分隔数量：
+
+```js
+const str = 'The quick brown fox jumps over the lazy dog.';
+
+const words = str.split(' ');
+console.log(words);
+// Array ["The", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "dog."]
+
+const chars = str.split('');
+console.log(chars);
+// Array ["T", "h", "e", " ", "q", "u", "i", "c", "k", " ", "b", "r", "o", "w", "n", " ", "f", "o", "x", " ", "j", "u", "m", "p", "s", " ", "o", "v", "e", "r", " ", "t", "h", "e", " ", "l", "a", "z", "y", " ", "d", "o", "g", "."]
+
+const strCopy = str.split();
+console.log(strCopy);
+// Array ["The quick brown fox jumps over the lazy dog."]
+```
+
+##### match 匹配正则
+
+接收一个正则对象，返回正则匹配的内容数组：
+
+```js
+const paragraph = 'The quick brown fox jumps over the lazy dog. It barked.';
+const regex = /[A-Z]/g;
+const found = paragraph.match(regex);
+
+console.log(found);
+// expected output: Array ["T", "I"]
+```
+
+##### search 匹配正则
+
+接收一个正则对象，返回第一个符合模式的字符下标，没有找到时返回-1：
+
+```js
+const paragraph = 'The quick brown fox jumps over the lazy dog. If the dog barked, was it really lazy?';
+
+// 非英文字符和空格
+const regex = /[^\w\s]/g;
+console.log(paragraph.search(regex));
+// 43
+console.log(paragraph[paragraph.search(regex)]);
+// "."
+```
+
+##### [[ iterator ]]
+
+字符串原型上有一个内置方法 [[ iterator ]]，可以使用常用内置符号访问，并手动使用迭代器：
+
+```js
+let message = "abc";
+let stringIterator = message[Symbol.iterator]();
+console.log(stringIterator.next()); // {value: "a", done: false}
+console.log(stringIterator.next()); // {value: "b", done: false}
+console.log(stringIterator.next()); // {value: "c", done: false}
+console.log(stringIterator.next()); // {value: undefined, done: true}
+```
+
+由于具有迭代器，字符串可以使用解构操作符进行解构：
+
+```js
+let message = "abcde";
+console.log([...message]); // ["a", "b", "c", "d", "e"]
+```
+
+##### localeCompare 比较单词表顺序
+
+用于在本地语言单词表中比较两个字符串中字符出现的顺序，出现位置小于给定字符串时返回-1，相同返回0，大于返回1：
+
+```js
+let stringValue = "yellow";
+console.log(stringValue.localeCompare("brick")); 	// 1
+console.log(stringValue.localeCompare("yellow")); 	// 0
+console.log(stringValue.localeCompare("zoo")); 		// -1
+```
+
+### 标准内置对象
+
+**标准内置对象**是任何由 ECMAScript 实现提供、**与宿主环境无关**，并在ECMAScript程序**开始执行时就存在**的对象。
+
+#### Global
+
+**Global** 对象是 ES 中最特殊的对象，代码不会显示访问这个对象（包括全局下的 this 指针）。事实上 ES 中并**不存在全局函数和全局变量**，在全局下定义的函数和变量都会**成为 Global 对象的属性**。
+
+那些看起来像是全局函数或变量的函数与变量实际上是 Global 对象的成员，`isNaN()`、`isFinite()`、`parseInt()`和`parseFloat()`，实际上都是 Global 对象的方法。
+
+##### URL 编码方法
+
+全局对象的 URL 编码方法用于将字符串编码为浏览器能识别的**统一资源标识符（URI）**。
+
+`encodeURI()`用于对整个字符串进行编码，转码所有**不属于 URL 组件中的非标准字符**，如冒号、斜杠、问号、井号，返回编码结果：
+
+```js
+let uri = "http://www.wrox.com/illegal value.js#start";
+
+console.log(encodeURI(uri));	// "http://www.wrox.com/illegal%20value.js#start"，空格被替换
+```
+
+`encodeURIComponent()`会将所有非标准字符转码，包括 URL 中内容：
+
+```js
+console.log(encodeURIComponent(uri));	// "http%3A%2F%2Fwww.wrox.com%2Fillegal%20value.js%23start"
+```
+
+一般使用`encodeURI()`来编码 URL 部分，而`encodeURIComponent()`则用来编码 URI 中剩余部分，如查询字符串。
+
+对应的，`decodeURI()`和`decodeURIComponent()`用于解码：
+
+```js
+let uri = "http%3A%2F%2Fwww.wrox.com%2Fillegal%20value.js%23start";
+// http%3A%2F%2Fwww.wrox.com%2Fillegal value.js%23start
+console.log(decodeURI(uri));
+// http:// www.wrox.com/illegal value.js#start
+console.log(decodeURIComponent(uri));
+```
+
+##### eval
+
+`eval()`就是一个完整的 ECMAScript 解释器。该方法接收一个 ECMAScript 字符串作为参数并执行。eval 中执行的代码拥有和调用 eval 时所在代码块相同的上下文与作用域链，因此可以访问相同上下文中定义的变量和函数。
+
+```js
+let msg = "hello world";
+eval("console.log(msg)"); 	// "hello world"
+```
+
+在 eval 内部定义的函数可以在外部被调用，而变量不行：
+
+```js
+eval("function sayHi() { console.log('hi'); }");
+sayHi();			// hi
+eval("let msg = 'hello world';");
+console.log(msg); 	// Reference Error: msg is not defined
+```
+
+在严格模式下，外部将无法访问 eval 内部创建的函数和变量。
+
+> 使用 eval 时应该注意页面安全，注意防范 XXS，以及谨慎使用用户输入内容作为 eval 参数。
+
+##### window
+
+在浏览器中，**window 对象**实际上是 Global 对象的代理，是对 ES 的 Global 对象的实现，可以通过 this 指针访问。
+
+#### Math
+
+全局对象属性 Math 用于进行数学相关操作。和其他内置原生方法一样，Math 中的方法由解释器实现，拥有比同样的 JavaScript 代码实现更高的效率。
+
+##### 对象属性
+
++ `Math.E`：自然对数的基数e 的值
++ `Math.LN10`： 10为底的自然对数
++ `Math.LN2`： 2为底的自然对数
++ `Math.LOG2E`： 以2 为底e 的对数
++ `Math.LOG10E`： 以10 为底e 的对数
++ `Math.PI`： π 的值
++ `Math.SQRT1_2`： 1/2的平方根
++ `Math.SQRT2`： 2的平方根
+
+##### min 和 max
+
+`min()`和`max()`方法用于确定一组数值中的最小值和最大值，接收任意多个参数，返回结果：
+
+```js
+let max = Math.max(3, 54, 32, 16);
+console.log(max); // 54
+let min = Math.min(3, 54, 32, 16);
+console.log(min); // 3
+let values = [1, 2, 3, 4, 5, 6, 7, 8];
+console.log(Math.max(...values));	// 8
+```
+
+##### ceil
+
+用于向上取整。
+
+```js
+console.log(Math.ceil(25.9));   // 26
+console.log(Math.ceil(25.5));   // 26
+console.log(Math.ceil(-25.1));  // -25
+```
+
+##### floor
+
+用于向下取整。
+
+```js
+console.log(Math.floor(25.9));  // 25
+console.log(Math.floor(25.5));  // 25
+console.log(Math.floor(-25.1)); // -25
+```
+
+##### round
+
+用于四舍五入。
+
+```js
+console.log(Math.round(25.9));  // 26
+console.log(Math.round(25.5));  // 26
+console.log(Math.round(-25.1)); // -25
+```
+
+##### fround
+
+返回最接近的单精度浮点值。
+
+```js
+console.log(Math.fround(0.4));  // 0.4000000059604645
+console.log(Math.fround(0.5));  // 0.5
+console.log(Math.fround(25.9)); // 25.899999618530273
+```
+
+##### random
+
+返回 [0,1) 区间内的随机数。以下是常用的随机数获取函数：
+
+```js
+let selectFrom = (lowerValue, upperValue) => {
+	return Math.floor(Math.random() * (upperValue - lowerValue + 1) + lowerValue);
+}
+```
+
+##### 其他方法
+
++ `Math.abs(x)` ：返回 x 的绝对值
++ `Math.exp(x)`：返回 Math.E 的x 次幂
++ `Math.expm1(x)`： 等于 Math.exp(x) - 1
++ `Math.log(x)`： 返回x 的自然对数
++ `Math.log1p(x)`： 等于1 + Math.log(x)
++ `Math.pow(x, power)`： 返回x 的 power 次幂
++ `Math.hypot(...nums)` ：返回 nums 中每个数平方和的平方根
++ `Math.clz32(x)`： 返回32 位整数 x 的前置零的数量
++ `Math.sign(x)` ：返回表示 x 符号的1、0、-0 或-1
++ `Math.trunc(x)`： 返回 x 的整数部分，删除所有小数
++ `Math.sqrt(x)` ：返回 x 的平方根
++ `Math.cbrt(x)`： 返回 x 的立方根
++ `Math.acos(x)` ：返回 x 的反余弦
++ `Math.acosh(x)` ：返回 x 的反双曲余弦
++ `Math.asin(x)` ：返回 x 的反正弦
++ `Math.asinh(x)` ：返回 x 的反双曲正弦
++ `Math.atan(x)` ：返回 x 的反正切
++ `Math.atanh(x)` ：返回 x 的反双曲正切
++ `Math.atan2(y, x)`： 返回 y/x 的反正切
++ `Math.cos(x)` ：返回 x 的余弦
++ `Math.sin(x)` ：返回 x 的正弦
++ `Math.tan(x)` ：返回 x 的正切
+
+#### 所有标准内置对象
+
+以下是所有 ECMAScript 标准内置对象。
+
+##### [值属性](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#值属性)
+
+这些全局属性返回一个简单值，这些值没有自己的属性和方法。
+
++ [`Infinity`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Infinity)
++ [`NaN`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/NaN)
++ [`undefined`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/undefined)
++ [`globalThis`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/globalThis)
+
+##### [函数属性](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#函数属性)
+
+全局函数可以直接调用，不需要在调用时指定所属对象，执行结束后会将结果直接返回给调用者。
+
++ [`eval()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/eval)
++ [`uneval()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/uneval)
++ [`isFinite()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/isFinite)
++ [`isNaN()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/isNaN)
++ [`parseFloat()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/parseFloat)
++ [`parseInt()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/parseInt)
++ [`decodeURI()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/decodeURI)
++ [`decodeURIComponent()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent)
++ [`encodeURI()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/encodeURI)
++ [`encodeURIComponent()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent)
++ 已废弃
+  + [`escape()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/escape)
+  + [`unescape()`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/unescape)
+
+##### [基本对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#基本对象)
+
+顾名思义，基本对象是定义或使用其他对象的基础。基本对象包括一般对象、函数对象和错误对象。
+
++ [`Object`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Object)
++ [`Function`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Function)
++ [`Boolean`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Boolean)
++ [`Symbol`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Symbol)
+
+###### 错误对象
+
+错误对象是一种特殊的基本对象。它们拥有基本的 [`Error`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Error) 类型，同时也有多种具体的错误类型。
+
++ [`Error`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Error)
++ [`AggregateError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/AggregateError)
++ [`EvalError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/EvalError)
++ [`InternalError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/InternalError)
++ [`RangeError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RangeError)
++ [`ReferenceError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/ReferenceError)
++ [`SyntaxError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/SyntaxError)
++ [`TypeError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypeError)
++ [`URIError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/URIError)
+
+##### [数字和日期对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#数字和日期对象)
+
+用来表示数字、日期和执行数学计算的对象。
+
++ [`Number`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Number)
++ [`BigInt`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/BigInt)
++ [`Math`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Math)
++ [`Date`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Date)
+
+##### [字符串](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#字符串)
+
+用来表示和操作字符串的对象。
+
++ [`String`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/String)
++ [`RegExp`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/RegExp)
+
+##### [可索引的集合对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#可索引的集合对象)
+
+这些对象表示按照索引值来排序的数据集合，包括数组和类型数组，以及类数组结构的对象。
+
++ [`Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Array)
++ [`Int8Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Int8Array)
++ [`Uint8Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Uint8Array)
++ [`Uint8ClampedArray`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Uint8ClampedArray)
++ [`Int16Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Int16Array)
++ [`Uint16Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Uint16Array)
++ [`Int32Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Int32Array)
++ [`Uint32Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Uint32Array)
++ [`Float32Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Float32Array)
++ [`Float64Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Float64Array)
++ [`BigInt64Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/BigInt64Array)
++ [`BigUint64Array`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/BigUint64Array)
+
+##### [使用键的集合对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#使用键的集合对象)
+
+这些集合对象在存储数据时会使用到键，包括可迭代的[`Map`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map) 和 [`Set`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)，支持按照插入顺序来迭代元素。
+
++ [`Map`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Map)
++ [`Set`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Set)
++ [`WeakMap`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WeakMap)
++ [`WeakSet`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WeakSet)
+
+##### [结构化数据](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#结构化数据)
+
+这些对象用来表示和操作结构化的缓冲区数据，或使用 JSON （JavaScript Object Notation）编码的数据。
+
++ [`ArrayBuffer`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer)
++ [`SharedArrayBuffer`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer)
++ [`Atomics`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Atomics)
++ [`DataView`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/DataView)
++ [`JSON`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/JSON)
+
+##### [控制抽象对象](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#控制抽象对象)
+
+控件抽象可以帮助构造代码，尤其是异步代码（例如，不使用深度嵌套的回调）。
+
++ [`Promise`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Promise)
++ [`Generator`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Generator)
++ [`GeneratorFunction`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/GeneratorFunction)
++ [`AsyncFunction`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/AsyncFunction)
+
+##### [反射](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#反射)
+
++ [`Reflect`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Reflect)
++ [`Proxy`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Proxy)
+
+##### [国际化](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#国际化)
+
+ECMAScript核心的附加功能，用于支持多语言处理。
+
++ [`Intl`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl)
++ [`Intl.Collator`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/Collator)
++ [`Intl.DateTimeFormat`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat)
++ [`Intl.ListFormat`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/ListFormat)
++ [`Intl.NumberFormat`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat)
++ [`Intl.PluralRules`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules)
++ [`Intl.RelativeTimeFormat`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/RelativeTimeFormat)
++ [`Intl.Locale`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale)
+
+##### [WebAssembly](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#webassembly)
+
++ [`WebAssembly`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly)
++ [`WebAssembly.Module`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Module)
++ [`WebAssembly.Instance`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Instance)
++ [`WebAssembly.Memory`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Memory)
++ [`WebAssembly.Table`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/Table)
++ [`WebAssembly.CompileError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/CompileError)
++ [`WebAssembly.LinkError` (en-US)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/LinkError)
++ [`WebAssembly.RuntimeError`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/WebAssembly/RuntimeError)
+
+##### [其他](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects#其他)
+
++ [`arguments`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Functions/arguments)
+
+> ECMAScript 的引用类型和传统面向对象语言中的类类似，但实现不同
+>
+> Date 是时间类型
+>
+> RegExp 是正则表达式接口
+>
+> 函数也是对象，即 Function 的实例
+>
+> 原始值在访问时会生成一个临时的原始值包装类型对象，因此可以在原始值上调用方法，语句结束即销毁包装对象
+
+---
