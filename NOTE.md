@@ -2113,3 +2113,172 @@ ECMAScript核心的附加功能，用于支持多语言处理。
 > 原始值在访问时会生成一个临时的原始值包装类型对象，因此可以在原始值上调用方法，语句结束即销毁包装对象
 
 ---
+
+## 06 集合引用类型
+
+### Object
+
+Object 是 ECMAScript 中所有引用类型的基类，其实例没有多少功能，但是适合存储数据。
+
+#### 创建实例
+
+Object 实例有两种创建方式，一种是使用 new 关键字，另一种是使用**对象字面量（object literal）**：
+
+```js
+let man = {	// 表达式上下文开始
+    name: "Steven",
+    age: 20
+};	// 表达式上下文结束
+```
+
+对象字面量从`{`开始到`}`结束，其中内容称为**表达式上下文（expression context）**，表达式上下文期待返回值，在对象字面量中返回值即是一个对象。类似的还有**语句上下文（statement context）**，内容是一段要执行的语句块。
+
+**在字面量中声明的 Number 类型的键会被自动转换为 String 类型**：
+
+```js
+let obj = {
+    name: 'Steven',
+    age: 20,
+    1: true         // Number类型的键会自动转为字符串类型
+};
+
+console.log(obj);   // { '1': true, name: 'Steven', age: 20 }
+```
+
+使用字面量定义对象的好处是并**不会调用 Object 的构造函数**，可以提高程序效率。
+
+#### 访问属性
+
+ES 中访问对象属性有两种方式，一种是和其他面向对象语言一样的**点语法**，`.`后的字面量实际是 String 类型的键：
+
+```js
+console.log(obj.name);
+```
+
+另一种是使用中括号，实际上是通过键的值来访问属性，键值可以是 String、Number 或 Symbol：
+
+```js
+console.log(obj['name']);
+console.log(arr[1]);
+console.log(arr[Symbol.iterator]);
+```
+
+### Array
+
+ES 中的 Array 引用类型是一组有序的数据，和其他强类型语言不同，每个槽位**可以存放任意类型的值**。Array 的长度时动态的，可以随着数据添加自动增长。数组最多可以包含 4 294 967 295 个元素。
+
+#### 创建数组 of
+
+数组可以通过构造函数和字面量创建，在使用构造函数创建时，可以接收一个 Number 类型参数，代表初始化数组大小，关键字 new 可以省略：
+
+```js
+let arr = new Array(10);
+console.log(arr);       // [ <10 empty items> ]
+```
+
+也可以接收多个任意类型值，作为数组的元素：
+
+```js
+let arr = new Array(true, '2', 3);
+console.log(arr);       // [ true, '2', 3 ]
+```
+
+但是有一个问题，如果要初始化一个只有一个 Number 类型元素的数组时，会出现歧义，此时可以使用 `of()`方法，接收一组参数，并将参数作为返回数组的元素：
+
+```js
+arr = Array(3);
+console.log(arr);           // [ <3 empty items> ]
+
+arr = Array.of(3);
+console.log(arr);           // [ 3 ]
+```
+
+#### 转化类数组结构 from
+
+**类数组结构**是类似于数组的数据结构类型，即任何**可迭代结构**，或是一个**拥有 length 属性并可索引**的结构，如 String、Map、Set 以及常用的函数内标准对象 arguments：
+
+```js
+console.log(Array.from('string'));      // [ 's', 't', 'r', 'i', 'n', 'g' ]
+
+console.log(Array.from(new Map().set('1', 1).set('2', 2)));
+// [ [ '1', 1 ], [ '2', 2 ] ]
+
+console.log(Array.from({
+    * [Symbol.iterator]() {
+        yield 1;
+        yield 2;
+        yield 3;
+        yield 4;
+    }
+}));        // [ 1, 2, 3, 4 ]
+
+function getArgsArray() {
+    console.log(arguments);            // [Arguments] { '0': 1, '1': 2, '2': 3, '3': 4 }
+    return Array.from(arguments);
+}
+console.log(getArgsArray(1, 2, 3, 4)); // [1, 2, 3, 4]
+```
+
+`Array.from()`实际上是一种**深拷贝**：
+
+```js
+let arr1 = [1, 2, 3, 4];
+let arr2 = Array.from(arr1);
+console.log(arr1 === arr2);             // false
+```
+
+`Array.from()`实际上可以接收三个参数，第二个参数为一个回调，接收类数组元素值作为参数，第三个参数用于提供回调中的 this 指向：
+
+```js
+console.log(Array.from([1, 2, 3, 4], v => v **= 2));
+// [ 1, 4, 9, 16 ]
+console.log(Array.from([1, 2, 3, 4], function (v) {
+    return v **= this.exponent;
+}, {exponent: 2}));
+// [ 1, 4, 9, 16 ]
+```
+
+#### 数组空位
+
+使用字面量创建数组时，可以留下空位，其中的值为 undefined：
+
+```js
+console.log([, , , , ,]);   // [ <5 empty items> ]
+console.log([1, , , 4]);    // [ 1, <2 empty items>, 4 ]
+console.log([1, , 4][1]);   // undefined
+```
+
+#### 数组索引
+
+数组对象的可迭代索引是类型为 Number 的键，通过`[]`访问，和对象属性一样可以动态添加：
+
+```js
+let arr = [1, 2, 3];
+console.log(arr[0]);        // 1
+arr[5] = 10;
+console.log(arr);           // [ 1, 2, 3, <2 empty items>, 10 ]
+```
+
+#### 数组长度 length
+
+数组元素的长度保存在`length`属性中，长度包括空位：
+
+```js
+console.log([1, , , 4].length);   // 4
+```
+
+`length`**不是只读的**，更改其值会改变元素个数，应该避免误操作该属性：
+
+```js
+let arr = [1, 2, 3, 4, 5];
+arr.length = 2;
+console.log(arr);                 // [1, 2]
+```
+
+#### 检测数组 isArray
+
+通常情况下，一个全局上下文中只有一个 Array 构造函数，因此要检测一个对象是否为数值类型，只需使用`instanceof`关键字。在一些场景下，一个网页中可能有多个全局上下文（如包含多个框架），如果**跨全局上下文传递数组对象**，可能导致传递的数组对象在另一全局上下文中被视作非 Array 类型。`Array.isArray()`方法可以避免这个问题：
+
+```js
+console.log(Array.isArray([]));    // true
+```
