@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>升级</title>
+    <template id="template">
+
+    </template>
+    <script>
+        class Custom extends HTMLElement {
+            template = document.getElementById('template') ?? document.createElement('template');
+
+            constructor() {
+                super();
+                this.attachShadow({mode: 'open'});
+                this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+            }
+
+            static get observedAttributes() {
+                return [];
+            }
+
+            connectedCallback() {
+
+            }
+
+            disconnectedCallback() {
+
+            }
+
+            attributeChangedCallback(name, oldValue, newValue) {
+
+            }
+
+            adoptedCallback() {
+
+            }
+        }
+    </script>
+</head>
+<body>
+<custom-el id="cus"></custom-el>
+<script>
+    const cus = document.getElementById('cus');             // 已连接在DOM中的元素，在有自定义元素时会自动升级
+    const unmounted = document.createElement('custom-el');  // 未连接的元素，不会自动升级
+
+    customElements.whenDefined('custom-el').then(() => console.log('custom-el defined'));
+
+    console.log('Is cus a instance of Custom before define?', cus instanceof Custom); // false
+    console.log('Is unmounted a instance of Custom before define?', unmounted instanceof Custom); // false
+
+    console.log('Is there a custom element called custom-el?', Boolean(customElements.get('custom-el'))); // false
+
+    customElements.define('custom-el', Custom); // 定义自定义元素
+    console.log('Is there a custom element called custom-el?', Boolean(customElements.get('custom-el'))); // true
+
+    console.log('Is cus a instance of Custom after define?', cus instanceof Custom); // true
+    console.log('Is unmounted a instance of Custom after define?', unmounted instanceof Custom); // false
+
+    customElements.upgrade(unmounted); // 强制升级
+    console.log('Is unmounted a instance of Custom after upgrade?', unmounted instanceof Custom); // true
+
+    // 期约onResolved异步打印'custom-el defined'
+</script>
+
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>template</title>
+</head>
+<body>
+<div id="foo"></div>
+<template id="temp1">
+    <p>Template 1</p>
+</template>
+<template id="temp2">
+    <p>Template 2</p>
+</template>
+<script>
+    const foo = document.getElementById('foo');
+    const temp1 = document.getElementById('temp1');
+    const temp2 = document.getElementById('temp2');
+    const frag1 = temp1.content;
+    const frag2 = document.importNode(temp2.content, true);
+
+    foo.appendChild(frag1);
+    foo.appendChild(frag2);
+</script>
+</body>
+</html>

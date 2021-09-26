@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>script</title>
+</head>
+<body>
+<div id="foo">1</div>
+<template id="temp">
+    <script>
+        console.log('Template script executed');
+    </script>
+</template>
+<script>
+    const foo = document.getElementById('foo');
+    const temp = document.getElementById('temp');
+
+    console.log('Before mount');
+    foo.appendChild(temp.content);
+    console.log('Mounted');
+</script>
+</body>
+</html>

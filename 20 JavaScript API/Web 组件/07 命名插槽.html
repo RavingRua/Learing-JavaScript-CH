@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>slot</title>
+</head>
+<body>
+<div id="host">
+    <p slot="second">2</p>
+    <p slot="first">1</p>
+</div>
+<script>
+    const host = document.getElementById('host');
+    const shadowRoot = host.attachShadow({mode: 'open'});
+    shadowRoot.innerHTML = `
+        <slot name="first"></slot>
+        <slot name="second"></slot>
+    `;
+</script>
+</body>
+</html>

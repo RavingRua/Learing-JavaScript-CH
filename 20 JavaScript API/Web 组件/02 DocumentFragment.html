@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>DocumentFragment</title>
+</head>
+<body>
+<script>
+    const frag = new DocumentFragment();
+
+    frag.appendChild(document.createElement('p'));
+    frag.appendChild(document.createElement('p'));
+    frag.appendChild(document.createElement('p'));
+
+    console.log(frag.children.length);          // 3
+
+    // 只进行一次DOM插入，刷新一次DOM，插入三个平级节点
+    document.querySelector('body').appendChild(frag);
+
+    console.log(frag.children.length);          // 0
+</script>
+</body>
+</html>

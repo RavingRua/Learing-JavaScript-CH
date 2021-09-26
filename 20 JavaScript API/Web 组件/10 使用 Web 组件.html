@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Components</title>
+
+    <!-- 模板 -->
+    <template id="custom-element">
+        #shadow-root
+        <p>This is a custom element.</p>
+        <slot></slot>
+        <style>
+
+        </style>
+    </template>
+
+    <!-- 创建自定义元素 -->
+    <script>
+        class CustomElement extends HTMLElement {
+            template = document.getElementById('custom-element') ?? document.createElement('template');
+
+            constructor() {
+                super();
+                this.attachShadow({mode: 'open'});
+                this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+            }
+        }
+
+        customElements.define('custom-el', CustomElement);
+    </script>
+</head>
+<body>
+
+<custom-el>
+    some text here.
+</custom-el>
+
+</body>
+</html>

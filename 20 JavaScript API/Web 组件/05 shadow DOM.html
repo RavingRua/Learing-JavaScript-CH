@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>shadow DOM</title>
+</head>
+<body>
+<div>outer</div>
+<div id="foo"></div>
+<div id="bar"></div>
+<script>
+    // shadow host
+    const foo = document.getElementById('foo');
+    const bar = document.getElementById('bar');
+
+    // shadow root
+    const openSDOM = foo.attachShadow({mode: 'open'});
+    const closedSDOM = bar.attachShadow({mode: 'closed'});
+
+    console.log(openSDOM);          // #shadow-root (open)
+    console.log(closedSDOM);        // #shadow-root (closed)
+
+    console.log(foo.shadowRoot);    // #shadow-root (open)
+    console.log(bar.shadowRoot);    // null
+
+    const pOpen = document.createElement('p');
+    const pClosed = document.createElement('p');
+    pOpen.innerText = 'open';
+    pClosed.innerText = 'closed';
+
+    openSDOM.appendChild(pOpen);
+    closedSDOM.appendChild(pClosed);
+
+    console.log(foo.innerHTML);     // ''
+    console.log(bar.innerHTML);     // ''
+    console.log(foo.shadowRoot);    // #shadow-root (open) <p>open</p>
+    console.log(bar.shadowRoot);    // null
+
+    const oStyle = document.createElement('style');
+    oStyle.innerText = `
+        p {
+            color: indianred;
+        }
+    `;
+    const cStyle = document.createElement('style');
+    cStyle.innerText = `
+        p {
+            color: cornflowerblue;
+        }
+    `
+
+    openSDOM.appendChild(oStyle);
+    closedSDOM.appendChild(cStyle);
+</script>
+</body>
+</html>

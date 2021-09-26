@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Web Components</title>
+</head>
+<body>
+<template id="temp">
+    <p>This is a p tag in document-fragment.</p>
+</template>
+<script>
+    const frag = document.getElementById('temp').content;
+    console.log(frag);                              // document-fragment
+    console.log(frag.querySelector('p'));           // <p>This is a p tag in document-fragment.</p>
+</script>
+</body>
+</html>

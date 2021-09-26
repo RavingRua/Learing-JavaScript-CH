@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>属性</title>
+    <template id="template">
+
+    </template>
+    <script>
+        class Custom extends HTMLElement {
+            template = document.getElementById('template') ?? document.createElement('template');
+
+            constructor() {
+                super();
+                this.attachShadow({mode: 'open'});
+                this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+
+                this.foo;
+            }
+
+            static get observedAttributes() {
+                return ['foo'];
+            }
+
+            get foo() {
+                return this.getAttribute('foo');
+            }
+
+            set foo(value) {
+                this.setAttribute('foo', value);
+            }
+
+            connectedCallback() {
+                this.foo = true;
+            }
+
+            attributeChangedCallback(name, oldValue, newValue) {
+                if (oldValue === newValue) return;
+                console.log(`${oldValue} -> ${newValue}`);
+            }
+        }
+
+        customElements.define('custom-el', Custom);
+    </script>
+</head>
+<body>
+<custom-el id="cus"></custom-el>
+<script>
+    const cus = document.getElementById('cus');
+    cus.foo = false;
+</script>
+</body>
+</html>

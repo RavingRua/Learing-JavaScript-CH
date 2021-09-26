@@ -1233,7 +1233,7 @@ console.log(this.val2);             // 浏览器：undefined，NodeJS：undefine
 
 #### 上下文栈
 
-**上下文栈**中存储每个上下文对应的变量对象，栈底为全局上下文。当流程进入函数时，会将函数上下文推入上下文栈，如果上个上下文也是函数则此函数将**中断**。当前函数流程结束返回时则弹出上下文栈顶元素，返回中断的上下文中继续执行流程。
+**上下文栈**中存储每个上下文对应的变量对象，栈底为全局上下文。当流程进入函数时，会将函数上下文推入上下文栈，如果下个进入的上下文也是函数则此函数将**中断**。当前函数流程结束返回时则弹出上下文栈顶元素，返回中断的上下文中继续执行流程。
 
 #### 作用域链
 
@@ -1243,14 +1243,14 @@ console.log(this.val2);             // 浏览器：undefined，NodeJS：undefine
 
 ```js
 // 作用域链
-{
+{	// 变量对象1
     // 链首
     let val1 = 1;
     let name = '1';
-    {
+    {	// 变量对象2
         let val2 = 2;
         let name = '2';
-        {
+        {	// 变量对象3
             // 链尾
             let val3 = 3;
             let name = '3';
@@ -2219,12 +2219,14 @@ function getArgsArray() {
 console.log(getArgsArray(1, 2, 3, 4)); // [1, 2, 3, 4]
 ```
 
-`Array.from()`实际上是一种**深拷贝**：
+`Array.from()`实际上是一种**浅拷贝**，返回的是一个新数组对象，但是内部元素是浅拷贝：
 
 ```js
-let arr1 = [1, 2, 3, 4];
-let arr2 = Array.from(arr1);
-console.log(arr1 === arr2);             // false
+let a = [[1], [2], [3]];
+let b = Array.from(a);
+console.log(a === b);
+a[0][0] = 10;
+console.log(b);			// [[10], [2], [3]]
 ```
 
 `Array.from()`实际上可以接收三个参数，第二个参数为一个回调，接收类数组元素值作为参数，第三个参数用于提供回调中的 this 指向：
@@ -2282,3 +2284,747 @@ console.log(arr);                 // [1, 2]
 ```js
 console.log(Array.isArray([]));    // true
 ```
+
+#### 迭代器方法
+
+`keys()`用于返回数组对象的索引迭代器：
+
+```js
+let arr = ["foo", "bar", "baz", "qux"];
+console.log(arr.keys());                // Object [Array Iterator] {}
+console.log(Array.from(arr.keys()));    // [ 0, 1, 2, 3 ]
+```
+
+`values()`返回元素迭代器：
+
+```js
+console.log(Array.from(arr.values()));  // [ 'foo', 'bar', 'baz', 'qux' ]
+```
+
+`entires()`返回索引和值的数组迭代器：
+
+```js
+console.log(Array.from(arr.entries())); 	// [ [ 0, 'foo' ], [ 1, 'bar' ], [ 2, 'baz' ], [ 3, 'qux' ] ]
+for (const [index, value] of arr.entries()) {
+    console.log(index);         			// 0,1,2,3
+    console.log(value);         			// foo,bar,baz,qux
+}
+```
+
+#### 填充方法 fill
+
+`fill()`方法用于使用指定值填充数组的一部分，不会改变数组原长度。第一个参数为用于填充的值，第二个可选参数为开始位置，默认0，第三个可选参数为结束位置（不填充该位置），默认为数组长度-1。参数为负数时从尾部计算位置。
+
+```js
+arr = [1, 2, 3, 4, 5];
+console.log(arr.fill(6));                       // [ 6, 6, 6, 6, 6 ]
+console.log(arr.fill(7, 1));            		// [ 6, 7, 7, 7, 7 ]
+console.log(arr.fill(8, 2, 4));     			// [ 6, 7, 8, 8, 7 ]
+```
+
+#### 内部复制 copyWithin
+
+`copyWithin()`方法用于在复制数组内部的一段元素并插入到内部指定位置，内部元素是**浅拷贝**：
+
+```js
+arr = [[1], 2, 3, 4, 5, 6, 7, 8, 9];
+console.log(arr.copyWithin(3));                 		// [[1], 2, 3, [1], 2, 3, 4, 5, 6]
+arr[0][0] = 10;
+console.log(arr[0]===arr[3]);						  // true
+console.log(arr);                                       // [[ 10 ], 2, 3, [ 10 ], 2, 3, 4, 5, 6]
+```
+
+只有一个参数时，从0开始复制，到参数指定位置（不包括该位置元素）结束，插入到该参数指定位置：
+
+```js
+let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+console.log(arr.copyWithin(3));                 // [1, 2, 3, 1, 2, 3, 4, 5, 6]
+```
+
+两个参数时，第一个参数为插入位置，第二个为开始复制的位置，一直复制到底：
+
+```js
+console.log(arr.copyWithin(0, 5));         // [6, 7, 8, 9, 5, 6, 7, 8, 9]
+```
+
+三个参数时，第一个参数为插入位置，第二个参数为复制开始位置，第三个参数为复制结束位置（不包括该位置）：
+
+```js
+console.log(arr.copyWithin(4, 0, 3)); 	// [1, 2, 3, 4, 1, 2, 3, 8, 9]
+```
+
+#### 转换方法
+
+转换方法继承自 Object，`valueOf()`返回数组本身，`toString()`返回一个字符串，该字符串由每个元素的等效字符串（toString 返回值）和逗号连接，`toLocalString()`返回本地化结果。如果某项元素的转换值为 null 或 undefined，则以空字符串表示。
+
+#### 栈方法
+
+`pop()`和`push()`用于像栈一样操作数组元素。`push()`接收任意个数参数，按照顺序压入栈（从数组尾），返回压入个数。**数组尾相当于栈顶**，`pop()`返回并删除数组尾元素。
+
+#### 队列方法
+
+`shift()`用于出队操作，入队使用`push()`。**数组头相当于队头**，`shift()`返回数组第一个元素。`unshift()`执行和`shift()`相反操作，从队头依次压入元素：
+
+```js
+arr = [1];
+arr.push(2, 3);
+console.log(arr);               // [ 1, 2, 3 ]
+arr = [1];
+arr.unshift(2, 3);
+console.log(arr);               // [ 2, 3, 1 ]
+arr.shift();
+console.log(arr);               // [ 3, 1 ]
+```
+
+#### 反向排列 reverse
+
+`reverse()`方法用于倒转数组元素，返回数组本身。该方法会改变数组内容。
+
+#### 排序 sort
+
+`sort()`方法默认按升序重新排列数组，比较规则是调用转型函数 `String()`。可以传入一个比较函数作回调，回调接收两个参数代表比较双方，如果第一个参数应该排在第二个参数前面，就返回**负值**；如果两个参数相等，就**返回0**；如果第一个参数应该排在第二个参数后面，就返回正值：
+
+```js
+// 升序
+(value1, value2) => {
+    if (value1 < value2) {
+        return -1;
+    } else if (value1 > value2) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+// 等价于该表达式
+(a, b) => a < b ? 1 : a > b ? -1 : 0;
+
+// 数值类型可以更加简化
+(a, b) => a - b;
+```
+
+该方法返回排序后的数组自身。
+
+#### 数组连接 concat
+
+`concat()`用于连接数组并返回连接结果，不改变数组自身。参数是数组是会被打平，每个元素连接到目标数组上，非数组类型参数直接连接：
+
+```js
+arr = [1, 2, 3];
+console.log(arr.concat([4, 5, 6], [7, 8]));     // [ 1, 2, 3, 4, 5, 6, 7, 8 ]
+console.log(arr);                               // [ 1, 2, 3 ]
+```
+
+打平数组的行为在创建数组对象时可以改写，该属性用布尔值控制，使用内置符号访问：
+
+```js
+let colors = ["red", "green", "blue"];
+let newColors = ["black", "brown"];
+let moreNewColors = {
+[Symbol.isConcatSpreadable]: true,
+length: 2,
+0: "pink",
+1: "cyan"
+};
+newColors[Symbol.isConcatSpreadable] = false;
+// 强制不打平数组
+let colors2 = colors.concat("yellow", newColors);
+// 强制打平类数组对象
+let colors3 = colors.concat(moreNewColors);
+console.log(colors); // ["red", "green", "blue"]
+console.log(colors2); // ["red", "green", "blue", "yellow", ["black", "brown"]]
+console.log(colors3); // ["red", "green", "blue", "pink", "cyan"]
+```
+
+#### 截取部分 slice
+
+`slice()`方法返回截取的部分数组，不修改元素组，第一个参数为开始截取位置，第二个为结束位置（不包括该元素），默认数组长度：
+
+```js
+console.log([1, 2, 3, 4].slice());              // [ 1, 2, 3, 4 ]
+console.log([1, 2, 3, 4].slice(1));             // [ 1, 2, 3 ]
+console.log([1, 2, 3, 4].slice(1,2));           // [ 2 ]
+```
+
+#### 插入、替换和删除 splice
+
+`splice()`方法本身用于插入数组，也可用于替换与删除数组。接收三个或更多参数：开始插入位置、要删除的元素个数、插入内容（默认为空），插入内容不会被打平。该方法会修改原数组，返回从数组中删除的元素数组。
+
+插入内容：
+
+```js
+arr = [1, 2, 3];
+console.log(arr.splice(0, 2, 1, 2, 4, 5, [6, 7]));       // [ 1, 2 ]
+console.log(arr);                   // [ 1, 2, 4, 5, [ 6, 7 ], 3 ]
+```
+
+替换内容，控制删除个数和插入个数一致即可：
+
+```js
+arr = [1, 2, 3];
+arr.splice(0, 2, 9, 10);
+console.log(arr);                   // [ 9, 10, 3 ]
+```
+
+删除内容，将第三个参数闲置即可：
+
+```js
+arr = [1, 2, 3];
+arr.splice(1, 1);
+console.log(arr);                   // [ 1, 3 ]
+```
+
+#### 严格相等搜索 indexOf includes
+
+`includes()`、`indexOf()`和`lastIndexOf()`用于在数组内搜索指定元素，使用全等`===`比较。接收两个参数：需要查找的元素，可选的起始位置。`indexOf()`从头开始查找，`lastIndexOf()`从末尾开始查找，如果存在元素则返回下标，不存在返回-1。`includes()`返回布尔值：
+
+```js
+let numbers = [1, 2, 3, 4, 5, 4, 3, 2, 1];
+alert(numbers.indexOf(4)); // 3
+alert(numbers.lastIndexOf(4)); // 5
+alert(numbers.includes(4)); // true
+alert(numbers.indexOf(4, 4)); // 5
+alert(numbers.lastIndexOf(4, 4)); // 3
+alert(numbers.includes(4, 7)); // false
+```
+
+#### 断言函数搜索 find
+
+`find()`方法使用一个断言函数进行搜索，该函数需要返回一个布尔值。回调接收三个参数：元素、下标、数组本身，当返回值为 true 时中断搜索。`find()`在找到目标时返回目标值，没有找到是返回 undefined。可以接收第二个参数，指定回调内部的 this。`findIndex()`方法返回下标，没有找到返回-1：
+
+```js
+console.log([1, 2, 3].find(value => value === 3));          // 3
+console.log([1, 2, 3].find(value => value === 4));          // undefined
+console.log([1, 2, 3].findIndex(value => value === 3));     // 2
+console.log([1, 2, 3].findIndex(value => value === 4));     // -1
+```
+
+#### 迭代方法 every filter forEach map some
+
+数组有五个迭代方法，这些方法接收一个回调，回调接收三个参数：元素、下标、数组本身。
+
++ `every()`：与连接，对数组每一项都运行传入的函数，如果对每一项函数都返回 true，则这个方法返回 true。
++ `filter()`：过滤元素，对数组每一项都运行传入的函数，函数返回 true 的项会组成数组之后返回。
++ `forEach()`：遍历并执行，对数组每一项都运行传入的函数，没有返回值。
++ `map()`：遍历支线并保存结果，对数组每一项都运行传入的函数，返回由每次函数调用的结果构成的数组。
++ `some()`：或连接，对数组每一项都运行传入的函数，如果有一项函数返回 true，则这个方法返回 true。
+
+#### 归并方法 reduce
+
+`reduce()`执行归并处理，参数为一个回调和初始归并值。回调接收四个参数：上一归并值、元素、下标、数组本身，并返回下一次调用时作为上一归并值的结果。如果没有指定初始归并值，则从数组第二个元素开始迭代.可以用累加来解释归并行为：
+
+```js
+let values = [1, 2, 3, 4, 5];
+let sum = values.reduce((prev, cur, index, array) => prev + cur);
+alert(sum); // 15
+```
+
+`reduceRight()`则是从尾部开始归并。
+
+---
+
+## 20 JavaScript API
+
+### Web Components
+
+**Web Components** 即 **Web 组件**，是一套用于增强 DOM 行为的工具，包括 **Shadow DOM（影子 DOM）**、**Custom Element（自定义元素）**和 **HTML Template（HTML 模板）**。
+
+Web 组件在各浏览器中的具体实现并不相同，且目前在页面组件数较多时 Shadow DOM 的执行效率并没有一些框架使用的虚拟 DOM效率高。但由于是原生内容，开发者可以跨非原生框架使用这些可复用内容。
+
+#### HTML Template
+
+在 Web 组件之前，浏览器没有基于 HTML 解析构建子 DOM 的功能。直接使用`innerHTML`存在巨大安全隐患（恶意插入代码、信息丢失等），`document.createElement()`的使用过于复杂，且与标签无关。
+
+**HTML 模板**的核心思想是，提前在 HTML 写好特殊标记，让浏览器将其作为子 DOM 解析，但不进行渲染，在需要使用的时候将模板内容**转移**到 DOM 上。使用`<template>`标签创建一个模板：
+
+```html
+<template id="foo">
+	<p>I'm inside a template!</p>
+</template>
+```
+
+##### Document Fragment
+
+模板内的内容并不会被渲染，DOM 查询方法也无法获取其中节点。模板的子节点被包含在其`DocumentFragment`节点内，可见于浏览器开发者工具：
+
+```html
+<template id="foo">
+#document-fragment
+	<p>I'm inside a template!</p>
+</template>
+```
+
+通过 JavaScript DOM API 获取节点引用后，可以从节点的`content`属性中获取`DocumentFragment`的引用：
+
+```js
+console.log(document.getElementById('temp').content);   // document-fragment
+```
+
+利用`DocumentFragment`可以向 DOM 中一次添加多个平级节点。如果多次调用`appendChild`会导致**每次添加都重新排列一次 DOM**，`DocumentFragment`由于本身不是一个 DOM 节点对象，不会影响节点优化。在将`DocumentFragment`对象挂载到 DOM 上后，该对象的子节点会直接转移到 DOM 中，`DocumentFragment`成为一个**没有子节点的空节点**：
+
+```js
+    const frag = new DocumentFragment();
+
+    frag.appendChild(document.createElement('p'));
+    frag.appendChild(document.createElement('p'));
+    frag.appendChild(document.createElement('p'));
+
+    console.log(frag.children.length);          // 3
+
+    // 只进行一次DOM插入，刷新一次DOM，插入三个平级节点
+    document.querySelector('body').appendChild(frag);
+
+    console.log(frag.children.length);          // 0
+```
+
+##### \<template>
+
+`<template>`与`DocumentFragment`一样，将其挂载到 DOM 中后其子节点会**直接转移**：
+
+```js
+const fooElement = document.querySelector('#foo');
+const barTemplate = document.querySelector('#bar');
+const barFragment = barTemplate.content;
+console.log(document.body.innerHTML);
+// <div id="foo">
+// </div>
+// <template id="bar">
+// <p></p>
+// <p></p>
+// <p></p>
+// </template>
+fooElement.appendChild(barFragment);
+console.log(document.body.innerHTML);
+// <div id="foo">
+// <p></p>
+// <p></p>
+// <p></p>
+// </div>
+// <tempate id="bar"></template>
+```
+
+使用`document.importNode`方法可以**克隆**一个已经在 DOM 中的`DocumentFragment`对象，返回一个新的对象而不是引用，因此原模板中的内容不会消失。也可以使用`DocumentFragment`的`cloneNode()`方法进行克隆，该方法接收一个布尔值来决定深度还是浅度克隆：
+
+```js
+const fooElement = document.querySelector('#foo');
+const barTemplate = document.querySelector('#bar');
+const barFragment = barTemplate.content;
+console.log(document.body.innerHTML);
+// <div id="foo">
+// </div>
+// <template id="bar">
+// <p></p>
+// <p></p>
+// <p></p>
+// </template>
+fooElement.appendChild(document.importNode(barFragment, true));
+console.log(document.body.innerHTML);
+// <div id="foo">
+// <p></p>
+// <p></p>
+// <p></p>
+// </div>
+// <template id="bar">
+// <p></p>
+// <p></p>
+// <p></p>
+// </template>
+```
+
+##### 模板中的 script
+
+模板中的`<script>`标签内容并不会执行，直到被添加到 DOM 中。可以利用这个特性来初始化内容：
+
+```js
+// 页面HTML：
+//
+// <div id="foo"></div>
+// <template id="bar">
+// <script>console.log('Template script executed');</script>
+// </template>
+const fooElement = document.querySelector('#foo');
+const barTemplate = document.querySelector('#bar');
+const barFragment = barTemplate.content;
+console.log('About to add template');
+fooElement.appendChild(barFragment);
+console.log('Added template');
+// About to add template
+// Template script executed
+// Added template
+```
+
+#### Shadow DOM
+
+**Shadow DOM（影子 DOM）**可以将一个完整的 DOM 树添加到父 DOM 中，并且可以实现封装，因此 **CSS 样式可以限制在 shadow DOM 中**而不是整个父 DOM 中。
+
+为了安全和节点间的兼容，**并非所有**类型的 HTML 节点都可以包含 shadow DOM，如`<input>`，尝试向这些节点添加 shadow DOM 会抛出错误。
+
+##### 创建影子 DOM 和可访问性
+
+一个 shadow DOM 通过 HTML 对象的`attachShadow()`方法创建，容纳 shadow DOM 的节点称为 **shadow host（影子宿主）**，shadow DOM 的根节点称为 **shadow root（影子根）**。
+
+`attachShadow()`接收一个`shadowRootInit`对象作参数，返回一个 shadow DOM 实例。`shadowRootInit`包含一个`mode`属性，指定为`'open'`时，可以通过 HTML 元素的`shadowRoot`属性获取影子 DOM 的引用，为`'closed'`则不可获得。
+
+```js
+document.body.innerHTML = `
+    <div id="foo"></div>
+    <div id="bar"></div>
+`;
+const foo = document.querySelector('#foo');
+const bar = document.querySelector('#bar');
+const openShadowDOM = foo.attachShadow({ mode: 'open' });
+const closedShadowDOM = bar.attachShadow({ mode: 'closed' });
+console.log(openShadowDOM); // #shadow-root (open)
+console.log(closedShadowDOM); // #shadow-root (closed)
+console.log(foo.shadowRoot); // #shadow-root (open)
+console.log(bar.shadowRoot); // null
+```
+
+即使可以隐藏影子 DOM 内容，恶意代码扔有许多方式可以获取其内容，因此封闭 shadow DOM **并不能实现内容保密**，并且其 HTML 在调试工具中是可视的。使用`<iframe>`来跨域引用资源会更加可靠。
+
+##### 使用影子 DOM
+
+影子 DOM 实例的使用和其他 HTML 节点元素相同：
+
+```js
+for (let color of ['red', 'green', 'blue']) {
+const div = document.createElement('div');
+const shadowDOM = div.attachShadow({ mode: 'open' });
+document.body.appendChild(div);
+// 为shadow dom添加内容，css仅在影子DOM内部有效
+shadowDOM.innerHTML = `
+    <p>Make me ${color}</p>
+    <style>
+    	p {
+    		color: ${color};
+    	}
+    </style>
+`;
+}
+```
+
+##### slot 插槽
+
+在默认情况下，如果为一个影子宿主创建影子 DOM，其原先内部元素会被**转移**到影子 DOM 中，但是原先的内部节点会被**隐藏**：
+
+```js
+// 1秒后p标签内容会被隐藏
+document.body.innerHTML = `
+    <div>
+    <p>Foo</p>
+    </div>
+`;
+setTimeout(() => document.querySelector('div').attachShadow({ mode: 'open' }), 1000);	
+```
+
+影子 DOM 的优先级高于节点原来的内容，浏览器会优先渲染影子 DOM ，因为添加的影子 DOM 是空的，所以不会显示任何内容。
+
+如果需要让一些不属于影子 DOM 中的元素在影子 DOM 中渲染，需要使用`<slot>`，原先位于节点中的元素会被**投射（projection）**到影子 DOM 中，但实际上**还是位于外部影子宿主中**。从浏览器控制台中可以看到这种映射关系：
+
+```js
+document.querySelector('div')
+.attachShadow({ mode: 'open' })
+.innerHTML = `
+    <div id="bar">
+        <slot></slot>
+    <div>
+`;
+console.log(document.querySelector('p').parentElement);	// <div id="foo"></div>
+```
+
+如果只有一个插槽，所有原来的元素都会被添加到该插槽中。
+
+##### 命名插槽
+
+**命名插槽（named slot）**用于实现多个投射，通过外部节点的 **slot** 属性和影子 DOM 的 **name** 属性对关联，内容渲染顺序和插槽位置相关：
+
+```js
+document.body.innerHTML = `
+    <div>
+    <p slot="foo">Foo</p>
+    <p slot="bar">Bar</p>
+    </div>
+`;
+document.querySelector('div')
+    .attachShadow({ mode: 'open' })
+    .innerHTML = `
+        <slot name="bar"></slot>
+        <slot name="foo"></slot>
+`;
+// Renders:
+// Bar
+// Foo
+```
+
+##### 事件重定向
+
+**事件重定向（event retarget）**指在影子 DOM 发生的事件会逃出影子 DOM 内部，该事件的`target`属性会**指向外部节点**。事件重定向只会发生在影子 DOM 内部元素上，插槽中从外部投射进来的元素并**不会**进行事件重定向：
+
+```js
+    // <div id="host">
+    //     <button>outer</button>
+    // </div>
+    const host = document.getElementById('host');
+    const shadowRoot = host.attachShadow({mode: 'open'});
+    shadowRoot.innerHTML = `
+        <button>click</button>
+        <slot></slot>
+    `;
+
+    shadowRoot.querySelector('button').addEventListener('click', ev => console.log(ev.target));
+    host.addEventListener('click', (ev) => console.log(ev.target));
+    host.querySelector('button').addEventListener('click', ev => console.log(ev.target));
+
+	// 点击outer，两次打印均为<button>outer</button>，但第一次来源为button，第二次来源为div
+	// 点击click，第一次打印为<button>click</button>，来源于button
+	// 第二次打印为<div id="host">...</div>，事件被重定向到了外部，来源于div
+```
+
+#### Custom Element
+
+浏览器会尝试将无法识别的标签整合进 DOM，以行内元素的方式显示其内容，这些无法识别的元素**和原生 HTML 元素是同一类型**，具有相同的属性：
+
+```js
+document.body.innerHTML = `
+	<x-foo >I'm inside a nonsense element.</x-foo >
+`;
+console.log(document.querySelector('x-foo') instanceof HTMLElement); // true
+```
+
+通过使用 **Custom Element（自定义元素）**，可以定义一非 HTML 标准的标签，并为其添加更复杂的行为。
+
+##### 创建自定义元素
+
+自定义元素通过调用全局对象下的 **customElements** 属性（CustomElements 类型的对象）的`define`方法创建，该方法接收一个字符串和一个派生自`HTMLElement`构造函数（类）的对象（也可以不派生，会失去原生元素的属性）。字符串作为自定义元素名使用，要求必须**包含至少一个不在开头或结尾的连字符**，否则会抛出错误：
+
+```js
+class FooElement extends HTMLElement {}
+customElements.define('x-foo', FooElement);
+document.body.innerHTML = `
+	<x-foo>I'm inside a nonsense element.</x-foo>
+`;
+console.log(document.querySelector('x-foo') instanceof FooElement); // true
+```
+
+通过调用自定义元素的**构造函数**来控制该类在每个 DOM 实例中的行为，该构造函数会覆盖基类构造函数，因此**必须调用基类的构造函数**：
+
+```js
+class FooElement extends HTMLElement {
+    constructor() {
+        super();
+        console.log('x-foo')
+    }
+}
+customElements.define('x-foo', FooElement);
+document.body.innerHTML = `
+    <x-foo></x-foo>
+    <x-foo></x-foo>
+    <x-foo></x-foo>
+`;
+// x-foo
+// x-foo
+// x-foo
+```
+
+##### 向自定义元素添加 Web 组件
+
+要向自定义组件中添加 Web 组件，需要使用影子 DOM，如果尝试直接添加子节点将会抛出错误：
+
+```js
+class CustomElement extends HTMLElement {
+    constructor() {
+        super();
+        console.log('create custom element');
+        // this.innerHTML = '<p>custom</p>'
+        this.attachShadow({mode: 'open'});
+        this.shadowRoot.innerHTML = `
+            #shadow-root
+            <p>This is a custom element</p>
+            <slot></slot>
+        `;
+    }
+}
+
+customElements.define('custom-el', CustomElement);
+```
+
+让视图部分与 JavaScript 代码分离会更加清晰：
+
+```html
+    <!-- 模板 -->
+    <template id="custom-element">
+        #shadow-root
+        <p>This is a custom element.</p>
+        <slot></slot>
+        <style>
+
+        </style>
+    </template>
+
+    <!-- 创建自定义元素 -->
+    <script>
+        class CustomElement extends HTMLElement {
+            template = document.getElementById('custom-element') ?? document.createElement('template');
+
+            constructor() {
+                super();
+                this.attachShadow({mode: 'open'});
+                this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+            }
+        }
+
+        customElements.define('custom-el', CustomElement);
+    </script>
+
+    <custom-el>
+        some text here.
+    </custom-el>
+```
+
+`<template>`标签可以位于`<head>`中，这样将不影响`<body>`内部的节点优化。
+
+单 js 文件，在 HTML 中使用`<script type="module" src="xxx.js"></script>`引入：
+
+```js
+const template = `
+    #shadow-root
+    <p>This is a custom element.</p>
+    <slot></slot>
+`;
+
+const style = `
+    <style>
+
+    </style>
+`;
+
+class CustomElement extends HTMLElement {
+    constructor() {
+        super();
+        this.attachShadow({mode: 'open'});
+        this.shadowRoot.innerHTML = template + style;
+    }
+}
+
+customElements.define('custom-el', CustomElement);
+
+export default CustomElement;
+```
+
+##### 组件生命周期
+
+自定义元素组件有5个**生命周期方法**：
+
++ `constructor()`：在创建元素实例或将已有DOM 元素升级为自定义元素时调用。
++ `connectedCallback()`：在每次将这个自定义元素实例添加到DOM 中时调用。
++ `disconnectedCallback()`：在每次将这个自定义元素实例从DOM中移除时调用。
++ `attributeChangedCallback(name, oldValue, newValue)`：在每次**可观察属性**的值发生变化时调用。在元素实例初始化时，初始值的定义也算一次变化。
++ `adoptedCallback()`：在通过document.adoptNode()将这个自定义元素实例移动到新文档对象时调用。
+
+```js
+class FooElement extends HTMLElement {
+    constructor() {
+    	super();
+    	console.log('ctor');
+    }
+    connectedCallback() {
+    	console.log('connected');
+    }
+    disconnectedCallback() {
+    	console.log('disconnected');
+    }
+}
+customElements.define('x-foo', FooElement);
+const fooElement = document.createElement('x-foo');
+// ctor
+document.body.appendChild(fooElement);
+// connected
+document.body.removeChild(fooElement);
+```
+
+如果需要在元素属性变化后，触发 `attributeChangedCallback()`回调函数，必须监听该属性。这可以通过定义`observedAttributes()` get 函数来实现，`observedAttributes()`函数体内包含一个 return语句，返回一个数组，包含了需要监听的属性名称：
+
+```js
+static get observedAttributes() {
+    return ['foo'];
+}
+```
+
+##### 反射自定义元素属性
+
+自定义元素应该是**响应式**的，对 DOM 的修改应该反映到 JavaScript 对象上。要进行 **JavaScript 至 DOM 间的反射**，常见的方法是使用 getter 和 setter；**DOM 至 JavaScript** 间的反射则需要使用`observedAttributes()`添加**可观察属性**，可观察属性的值变化时会调用`attributeChangedCallback()`：
+
+```js
+class Custom extends HTMLElement {
+    template = document.getElementById('template') ?? document.createElement('template');
+
+    constructor() {
+        super();
+        this.attachShadow({mode: 'open'});
+        this.shadowRoot.appendChild(this.template.content.cloneNode(true));
+
+        // 构造时自定义元素不能被初始化，会抛出错误
+        this.foo;
+    }
+
+	// 设置观察属性
+    static get observedAttributes() {
+        return ['foo'];
+    }
+
+    get foo() {
+        return this.getAttribute('foo');
+    }
+
+    set foo(value) {
+        this.setAttribute('foo', value);
+    }
+
+	// 挂载时初始化
+    connectedCallback() {
+        this.foo = true;
+    }
+
+	// 观察属性变化时的回调
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue === newValue) return;
+        console.log(`${oldValue} -> ${newValue}`);
+    }
+}
+
+customElements.define('custom-el', Custom);
+```
+
+##### 升级自定义元素
+
+并非总是要先定义自定义元素，再在 DOM 中使用它们。`CustomElementRegistry`类型暴露了一些方法来检测是否存在对应自定义元素，并进行相关操作。已经连接到 DOM 上的元素会在自定义元素被定义时**自动升级**，而没有连接的元素对象需要手动强制升级。
+
++ `CustomElementRegistry.get()`方法接收一个字符串，如果该元素已经定义，则返回元素对象引用，否则返回空。
++ `CustomElementRegistry.whenDefined()`接收一个字符串，返回一个期约，当对应自定义元素创建时期约将履行。
++ `CustomElementRegistry.upgrade()`接收一个 HTMLElement 对象，尝试强制升级该自定义元素。
+
+```js
+const cus = document.getElementById('cus');             // 已连接在DOM中的元素，在有自定义元素时会自动升级
+const unmounted = document.createElement('custom-el');  // 未连接的元素，不会自动升级
+class Custom {}
+
+customElements.whenDefined('custom-el').then(() => console.log('custom-el defined'));
+
+console.log('Is cus a instance of Custom before define?', cus instanceof Custom); // false
+console.log('Is unmounted a instance of Custom before define?', unmounted instanceof Custom); // false
+
+console.log('Is there a custom element called custom-el?', Boolean(customElements.get('custom-el'))); // false
+
+// 定义自定义元素
+customElements.define('custom-el', Custom);
+console.log('Is there a custom element called custom-el?', Boolean(customElements.get('custom-el'))); // true
+
+console.log('Is cus a instance of Custom after define?', cus instanceof Custom); // true
+console.log('Is unmounted a instance of Custom after define?', unmounted instanceof Custom); // false
+
+customElements.upgrade(unmounted); // 强制升级
+console.log('Is unmounted a instance of Custom after upgrade?', unmounted instanceof Custom); // true
+
+// 期约 onResolved 异步打印 'custom-el defined'
+```
+

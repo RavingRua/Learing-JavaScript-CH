@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>自定义元素</title>
+</head>
+<body>
+<script>
+    class CustomElement extends HTMLElement {
+        constructor() {
+            super();
+            console.log('create custom element');
+            // this.innerHTML = '<p>custom</p>'
+            this.attachShadow({mode: 'open'});
+            this.shadowRoot.innerHTML = `
+                #shadow-root
+                <p>This is a custom element</p>
+                <slot></slot>
+            `;
+        }
+    }
+
+    customElements.define('custom-el', CustomElement);
+</script>
+<custom-el id="custom">
+    custom element
+</custom-el>
+<script>
+    const custom = document.getElementById('custom');
+    console.log(customElements);
+    console.log(custom instanceof CustomElement);       // true
+    console.log(custom.innerHTML);                      // custom element
+</script>
+</body>
+</html>

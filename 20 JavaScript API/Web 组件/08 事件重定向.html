@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>事件</title>
+</head>
+<body>
+<div id="host">
+    <button>outer</button>
+</div>
+<script>
+    const host = document.getElementById('host');
+    const shadowRoot = host.attachShadow({mode: 'open'});
+    shadowRoot.innerHTML = `
+        <button>click</button>
+        <slot></slot>
+    `;
+
+    shadowRoot.querySelector('button').addEventListener('click', ev => console.log(ev.target));
+    host.addEventListener('click', (ev) => console.log(ev.target));
+    host.querySelector('button').addEventListener('click', ev => console.log(ev.target));
+</script>
+</body>
+</html>
