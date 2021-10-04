@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WeakMap</title>
+</head>
+<body>
+<div id="node">node</div>
+<script>
+    let node = document.getElementById('node');
+    const wm = new WeakMap([
+        [node, 'node']
+    ]);
+    console.log(wm);
+    setTimeout(() => {
+        node.remove();
+        node = null;
+        console.log(wm);
+    }, 2000);
+    // 浏览器的垃圾回收机制是按一定周期或在特定条件下进行的，因此弱映射内容并不一定会被马上清理
+    // 但是一旦失去引用，键值对就会在下一周期被清除
+</script>
+</body>
+</html>

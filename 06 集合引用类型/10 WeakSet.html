@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WeakSet</title>
+</head>
+<body>
+<div id="node">node</div>
+<script>
+    let node = document.getElementById('node');
+    const ws = new WeakSet([
+        node
+    ]);
+    console.log(ws);
+    setTimeout(() => {
+        node.remove();
+        node = null;
+        console.log(ws);
+    }, 2000);
+    // 浏览器的垃圾回收机制是按一定周期或在特定条件下进行的，因此弱集合内容并不一定会被马上清理
+    // 但是一旦失去引用，值就会在下一周期被清除
+</script>
+</body>
+</html>

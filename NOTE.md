@@ -368,7 +368,7 @@ console.log(Number.isInteger(1.00)); 	// true
 console.log(Number.isInteger(1.01)); 	// false
 ```
 
-IEEE 754 双精度浮点表示法规定在一定范围内的数值可以使用整数表示。这个数值范围从Number.MIN_SAFE_INTEGER（-2^53+1^）到Number.MAX_SAFE_INTEGER（2^53-1^），使用全局
+IEEE 754 双精度浮点表示法规定在一定范围内的数值可以使用整数表示。这个数值范围从Number.MIN_SAFE_INTEGER（-2^53^+1）到Number.MAX_SAFE_INTEGER（2^53^-1），使用全局
 Number 对象的方法`isSafeInteger()`可以判断一个数值是否为安全整数（可以存储为二进制整数）：
 
 ```js
@@ -1026,6 +1026,41 @@ let num1 = 1, num2 = 2, num3 = 3;
 let num = (5, 1, 4, 8, 0); // 0
 ```
 
+#### 展开操作符
+
+展开操作符`...`用于在函数调用与数组、对象构造时将数组表达式、字符串、对象展开，本质上是**深拷贝**。
+
+函数调用：
+
+```js
+const add = (x, y, z) => x + y + z;
+const arr = [1, 2, 3];
+console.log(add(...arr));               // 6
+```
+
+数组构造：
+
+```js
+const arr = [1, 2, 3];
+const arr1 = [arr, 4, 5, 6];
+const arr2 = [...arr, 4, 5, 6];
+console.log(arr1);                        // [ [ 1, 2, 3 ], 4, 5, 6 ]
+console.log(arr2);                        // [ 1, 2, 3, 4, 5, 6 ]
+arr[0] = 0;
+console.log(arr1);                        // [ [ 0, 2, 3 ], 4, 5, 6 ]
+console.log(arr2);                        // [ 1, 2, 3, 4, 5, 6 ]
+```
+
+对象属性深拷贝：
+
+```js
+const obj1 = {name: 'obj1'};
+const obj2 = {...obj1};
+obj2.name = 'obj2';
+console.log(obj1.name);                 // obj1
+console.log(obj2.name);                 // obj2
+```
+
 ### 流程控制语句
 
 + if：常用的判断语句
@@ -1051,16 +1086,29 @@ for (const key in obj) {
 }
 ```
 
-+ for-of：严格迭代语句，用于遍历**可迭代**对象的元素，获取的是**元素值**，一般用于数组等：
++ for-of：严格迭代语句，用于遍历**可迭代**对象的元素，获取的是**元素值**，一般用于数组等。of 关键字期待一个可迭代对象或一个迭代器：
 
 ```js
-let arr = ['foo', 'bar', 'baz'];
+const arr = ['foo', 'bar', 'baz'];
 
 for (const value of arr) {
     console.log(value);
     // foo
     // bar
     // baz
+}
+
+const map = new Map([
+    ['key1', 'value1'],
+    ['key2', 'value2'],
+    ['key3', 'value3'],
+]);
+
+for (let iter of map.entries()) {
+    console.log(iter);
+    // [ 'key1', 'value1' ]
+    // [ 'key2', 'value2' ]
+    // [ 'key3', 'value3' ]
 }
 ```
 
@@ -2157,8 +2205,7 @@ let man = {	// 表达式上下文开始
 };	// 表达式上下文结束
 ```
 
-对象字面量从`{`开始到`}`结束，其中内容称为**表达式上下文（expression context）**，表达式上下文期待返回值，在对象字面量中返回值即是一个对象。类似的还有**语句上下文（statement context）**
-，内容是一段要执行的语句块。
+对象字面量从`{`开始到`}`结束，其中内容称为**表达式上下文（expression context）**，表达式上下文期待返回值，在对象字面量中返回值即是一个对象。类似的还有**语句上下文（statement context）**，内容是一段要执行的语句块。
 
 **在字面量中声明的 Number 类型的键会被自动转换为 String 类型**：
 
@@ -2554,6 +2601,493 @@ alert(sum); // 15
 
 `reduceRight()`则是从尾部开始归并。
 
+### 定型数组
+
+新的 ES 增加**定型数组（typed array）**数据结构，用于提高向原生系统提交数据的效率。现代浏览器和 Node.js 所运行在的原生（native）操作系统一般是由汇编语言和 C 语言编写的，一些系统包括少部分 Java 代码。
+
+ArrayBuffer 有些类似其他定型数组的“视图”，或可以将其称作内存的**指针**，即数据类型值和内存二进制内容的关系。**无法直接更改** ArrayBuffer 内容，只能通过更改其他定型数组值来改变其内容。
+
+定型数组的来源和基于 Web 的图形 API 的引入有着很大的关系。WebGL 是根据 OpenGL ES 2.0 规范制定的，JavaScript 的双精度浮点数组向 WebGL 传递数据时都会发生类型转换，引发效率问题。定型数组提供的新数据类型可以解决向原生传递数据的效率问题。
+
+#### ArrayBuffer
+
+所有定型数组的基本单位是 **ArrayBuffer**，可以将其视作一种存储二进制数据的结构，本质是一串连续的内存空间。`ArrayBuffer()`构造函数的作用则是在内存中分配一定空间：
+
+```js
+const buf = new ArrayBuffer(16);
+console.log(buf.byteLength);                // 16
+```
+
+ArrayBuffer 一旦创建就**不能改变大小**，但是可以将其一部分通过`slice`复制到另一个实例中，本质是新开辟一块内存并赋值内存内容，而不是引用绑定：
+
+```js
+const buf1 = new ArrayBuffer(8);
+const buf2 = buf1.slice(4, 8);
+console.log(buf2 === buf1.slice(4, 8));     // false
+```
+
+与 C 中的 `malloc()`不同，`ArrayBuffer()`分配的空间有以下特点：
+
++ 分配失败时抛出错误
++ 内存地址分配上限为`Number.MAX_SAFE_INTEGER`（即2^53^ - 1）字节
++ 会将分配的所有内存初始化为0
++ 会被垃圾回收机制自动回收
+
+#### DataView
+
+一种可以改变 ArrayBuffer 的视图是 **DataView**，即数据视图。该结构为文件与网络 I/O 设计，不能迭代，是对内存位的**直接操作**。DataView 必须基于已有的 ArrayBuffer 创建，可以使用全部或部分 ArrayBuffer ：
+
+```js
+const buf = new ArrayBuffer(16);
+
+// 创建一个视图
+const fullDataView = new DataView(buf);
+
+// buffer属性是视图实际缓冲区的引用
+console.log(fullDataView.buffer === buf);       // true
+
+// byteOffset表示视图相对缓冲区的起点，0表示视图从缓冲区头部开始
+console.log(fullDataView.byteOffset);           // 0
+```
+
+也可以选择一部分缓冲区构造视图：
+
+```js
+// 一半缓冲区的视图
+const halfDataView = new DataView(buf, 8, 8);
+console.log(halfDataView.byteOffset);           // 8
+```
+
+##### ElementType
+
+存储在内存中的二进制本身不包含自身类型信息。在通过视图读写内存数据时，需要指定一个**元素类型（element type）**：
+
+| ElementType | 字节 |         说明         |  对应 C 类型   |           取值范围           |
+| :---------: | :--: | :------------------: | :------------: | :--------------------------: |
+|    Int8     |  1   |    8 位有符号整数    |  signed char   |           -128~127           |
+|    Uint8    |  1   |    8 位无符号整数    | unsigned char  |            0~255             |
+|    Int16    |  2   |   16 位有符号整数    |     short      |        -32 768~32 767        |
+|   Uint16    |  2   |   16 位无符号整数    | unsigned short |           0~65 535           |
+|    Int32    |  4   |   32 位有符号整数    |      int       | -2 147 483 648~2 147 483 647 |
+|   Uint32    |  4   |   32 位无符号整数    |  unsigned int  |       0~4 294 967 295        |
+|   Float32   |  4   | 32 位IEEE-754 浮点数 |     float      |      -3.4e+38~+3.4e+38       |
+|   Float64   |  8   | 64 位IEEE-754 浮点数 |     double     |     -1.7e+308~+1.7e+308      |
+
+对于每种元素类型，DataView 都提供了对应的读写方法，以 UInt8 为例：
+
+```js
+const view = new DataView(new ArrayBuffer(1));
+view.setUint8(0, 255);
+console.log(view.buffer);                       	 //  <ff>
+console.log(view.getUint8(0));      				// 255
+```
+
+在其他类型如 Uint16 中，可以指定需要的字节序。默认字节序为大端字节序，将最高有效位保存在第一个字节。
+
+视图读写时必须有足够的缓冲区，否则将抛出错误。
+
+#### 定型数组
+
+通过 ES 的 DataView API 控制内存的效率不如**定型数组**，定型数组通过 ES API 向原生发送指令来控制内存。这些定型数组只能控制对应的 ElementType ，其名称也和元素类型相关。定型数组的类型名称为 ElementType + Array。定型数组操作方式类似于数组，以`Int32Array`为例：
+
+```js
+// 申请一个长度为6（6位数）的int32
+const int32 = new Int32Array(6);
+
+console.log(int32.length);                  // 6
+
+// 每个int32数字占4个字节，因此其缓冲区占4*6个字节
+console.log(int32.buffer.byteLength);       // 24
+```
+
+定型数组的操作类似数组，具体可以参考 [MDN 类型化数组](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Typed_arrays)。
+
+### Map
+
+在 ES 6之前，键值对的映射数据结构类型的数据可以利用 Object 来存取。ES 6 中提出了**映射（Map）**专门支持键值对类型数据的存储，键可以为任意类型。
+
+#### Map 与 Object 的区别
+
++ Map 支持所有数据类型作键，Object 只支持 Number、String、Symbol 类型作键，并且 Number 类型键会在实际构造时被转化为 String 
++ Map 会维护键值对的插入顺序，而 Object 可能重新排列成员
++ Object 的原型链上会挂载成员，因此有一些默认键值对存在，除非使用 `Object.create(null)`，因此向获取 Object 的实际长度比较复杂，Map 可以直接访问 size 属性获得
++ Object 不是可迭代类型，而 Map 定义了[Symbol.iterator]的生成器，可迭代，有`forEach()`方法
++ Map 重写了 `toString()`，因此只会打印出存储的数据，而不会打印出所有成员
++ Object 使用 `delete`操作符删除成员，且该操作会导致解释器生成一个新的隐藏类。Map 使用`delete()`方法删除一个键值对
+
+#### 基本使用
+
+构造函数`Map()`接收一个可迭代类型对象，该对象内的值为键值对数组，这些数组会按迭代顺序插入映射中。
+
+利用数组构造一个映射：
+
+```js
+const m1 = new Map([
+    ['key1', 'value'],
+    // 出现重复键时新值覆盖旧值
+    ['key1', 'value1'],
+    ['key2', 'value2'],
+    ['key3', 'value3'],
+]);
+
+console.log(m1);            // Map(3) { 'key1' => 'value1', 'key2' => 'value2', 'key3' => 'value3' }
+```
+
+利用自定义可迭代对象创建：
+
+```js
+const m2 = new Map({
+    [Symbol.iterator]: function* () {
+        for (let i = 1; i <= 3; i++) {
+            yield [`key${i}`, `value${i}`];
+        }
+    }
+});
+
+console.log(m2);            // Map(3) { 'key1' => 'value1', 'key2' => 'value2', 'key3' => 'value3' }
+```
+
+使用`set`增加新的键值对，使用`has`检查键是否存在，使用`get`根据键获取值，使用`clear`清除所有内容，使用`delete`删除指定键：
+
+```js
+const m3 = new Map();
+m3.set('key1', 'value1')
+    .set('key2', 'value3')
+    .set('key3', 'value3');
+console.log(m3.has('key'));         	// false
+console.log(m3.has('key1'));        	// true
+console.log(m3.get('key'));             // undefined
+console.log(m3.get('key1'));            // 'value1'
+
+m3.delete('key1');
+console.log(m3);                        // Map(2) { 'key2' => 'value3', 'key3' => 'value3' }
+m3.clear();
+console.log(m3);                        // Map(0) {}
+```
+
+#### 顺序与迭代
+
+Map 与 Object 的**显著差异**之一是 Map 会维护键值对的插入顺序，而 Object 会自动调整键值对。因此在 Map 中可以按顺序进行跌打。
+
+`entries()`方法返回一个 Map 的迭代器，[Symbol.iterator]引用了该方法：
+
+```js
+const iter = map.entries();
+console.log(iter.next());       // { value: [ 'key1', 'value1' ], done: false }
+console.log(iter.next());       // { value: [ 'key2', 'value2' ], done: false }
+console.log(iter.next());       // { value: [ 'key3', 'value3' ], done: false }
+console.log(iter.next());       // { value: undefined, done: true }
+
+for (let iter of map.entries()) {
+    console.log(iter);
+    // [ 'key1', 'value1' ]
+    // [ 'key2', 'value2' ]
+    // [ 'key3', 'value3' ]
+}
+```
+
+`forEach()`用于遍历元素：
+
+```js
+map.forEach((value, key, map) => console.log(value));
+// value1
+// value2
+// value3
+```
+
+`keys()`返回键的迭代器：
+
+```js
+for (let key of map.keys()) {
+    console.log(key);
+}
+```
+
+`values()`返回值的迭代器：
+
+```js
+for (let value of map.values()) {
+    console.log(value);
+}
+```
+
+#### 选择 Map 还是 Object
+
+在强调性能的场景如 canvas 开发中，有必要仔细选择 Map 或 Object 作为数据结构。
+
++ 内存：给定内存下，Map 可以比 Object 多存储50%的键值对
++ 插入：在 Map 中插入键值对的效率比 Object 要高，对 Object 执行插入可能导致解释器生成新的隐藏类
++ 查找：一些解释器会对 Object 进行查询优化，而 Map 不会。涉及大量数据查找的情况下，Object 的查找速度会更快。但是解释器在不断更新，以后可能会有对 Map 类型的查找优化
++ 删除：使用操作符删除 Object 成员会导致解释器生成新的隐藏类，因此一般建议将要删除的键的值设置为`null`或`undefined`，Map 的删除效率要比 Object 更高
+
+### WeakMap
+
+ES 6 的**弱映射（weak map）**与 Map 类似，“弱”指的是**垃圾回收**机制对其**键**的处理方式。WeakMap 的 API 是 Map 的 API 的子集。
+
+#### 弱键
+
+WeakMap 中的键被称为**弱键**，必须是 Object 或其派生类型。只要还有一个变量引用着引用类型值，这个引用类型值就不会被回收，而在引用类型值作为弱键时，键对该值是一种特殊的**弱引用**，垃圾回收机制不会将该引用视作一般的引用，因此弱引用不会阻止垃圾回收。
+
+在某个对象上存储数据时，如果数据是引用类型值，则对象对该值会有一个引用。以 DOM 元素为例子，如果将一个 DOM 元素作为弱映射的键，在该 DOM 消失并不存在引用后，弱映射中对应的键值对会自动被清除：
+
+```html
+<script>
+    let node = document.getElementById('node');
+    const wm = new WeakMap([
+        [node, 'node']
+    ]);
+    console.log(wm);
+    setTimeout(() => {
+        node.remove();
+        node = null;
+        console.log(wm);
+    }, 2000);
+    // 浏览器的垃圾回收机制是按一定周期或在特定条件下进行的，因此弱映射内容并不一定会被马上清理
+    // 但是一旦失去引用，键值对就会在下一周期被清除
+</script>
+```
+
+#### 不可迭代键
+
+由于弱映射中的元素在任何时刻都可能被销毁，因此没有必要提供迭代功能，也就没有迭代方法，因此不能通过遍历获取值，只能通过键来获取值。此外，也没有`clear`方法，因为无需一次清除所有内容，但是可以使用`delete`清除指定键值对。
+
+之所以要用引用类型值作键，是因为无法区分两个值相同的原始类型值是否为同一“值”，因为它们间的关系不是引用。
+
+### Set
+
+ES 6新增了**集合（Set）**类型，Set 类似 Map，是 Map 的加强版，不需要键值对结构，元素唯一。
+
+#### 基本使用
+
+构造函数`Set`接收一个可迭代对象，自动剔除重复元素：
+
+```js
+const s = new Set([
+    // 原始值重复会被剔除
+    1, 1, 2, 3,
+    // 对象都是独一无二的，因此是不同的引用类型值
+    {v: 1},
+    {v: 1},
+    {v: 2},
+    {v: 3},
+]);
+
+console.log(s);             // Set(7) { 1, 2, 3, { v: 1 }, { v: 1 }, { v: 2 }, { v: 3 } }
+```
+
+初始化之后，可以使用`add()`增加值，使用`has()`查询，通过`size`取得元素数量，以及使用`delete()`和`clear()`删除元素：
+
+```js
+const set = new Set();
+set.add(1)
+    .add(2)
+    .add(3)
+    .add({v: 1});
+console.log(set.has(1));            // true
+console.log(set.has({v: 1}));       // false，如果要删除集合中的引用类型值，该值需要有其他引用
+set.delete(1);
+set.delete({v: 1});
+console.log(set);                   // Set(3) { 2, 3, { v: 1 } }
+```
+
+#### 顺序与迭代
+
+集合也会维护元素插入顺序，并可迭代。集合元素不是键值对的数据结构，为了保持迭代相关 API 的统一，这些方法使用上相同，但结果和其他可迭代对象有区别：
+
+```js
+for (const key of set.keys()) {
+    console.log(key);
+    // 2
+    // 3
+    // { v: 1 }
+    // 不存在键值对，一律返回值
+}
+
+for (const value of set.values()) {
+    console.log(value);
+    // 2
+    // 3
+    // { v: 1 }
+    // 不存在键值对，一律返回值
+}
+
+for (const item of set.entries()) {
+    console.log(item);
+    // [ 2, 2 ]
+    // [ 3, 3 ]
+    // [ { v: 1 }, { v: 1 } ]
+    // 不存在键值对，以键值对形式返回值和值
+}
+
+set.forEach((value, value2, set) => console.log(value === value2));
+// true
+// true
+// true
+// 不存在键值对，因此第二个参数从索引变为值本身
+```
+
+#### 扩展集合
+
+ES 中提供的集合缺少一些基本数学集合运算方法，可以通过继承原生集合实现一个扩展的集合来支持这些操作。扩展集合应该支持以下原则：
+
++ 数学运算方法应该能处理任意多个集合
++ 扩展的集合应该保留原始集合插入顺序
++ 通过展开操作符来简化语句并提高效率
++ 不能修改已有的集合实例，类似二元操作符
+
+实现一个扩展集合：
+
+```js
+class XSet extends Set {
+    union(...sets) {
+        return XSet.union(this, ...sets)
+    }
+
+    intersection(...sets) {
+        return XSet.intersection(this, ...sets);
+    }
+
+    difference(set) {
+        return XSet.difference(this, set);
+    }
+
+    symmetricDifference(set) {
+        return XSet.symmetricDifference(this, set);
+    }
+
+    cartesianProduct(set) {
+        return XSet.cartesianProduct(this, set);
+    }
+
+    powerSet() {
+        return XSet.powerSet(this);
+    }
+
+    // 返回两个或更多集合的并集
+    static union(a, ...bSets) {
+        const unionSet = new XSet(a);
+        for (const b of bSets) {
+            for (const bValue of b) {
+                unionSet.add(bValue);
+            }
+        }
+        return unionSet;
+    }
+
+    // 返回两个或更多集合的交集
+    static intersection(a, ...bSets) {
+        const intersectionSet = new XSet(a);
+        for (const aValue of intersectionSet) {
+            for (const b of bSets) {
+                if (!b.has(aValue)) {
+                    intersectionSet.delete(aValue);
+                }
+            }
+        }
+        return intersectionSet;
+    }
+
+    // 返回两个集合的差集
+    static difference(a, b) {
+        const differenceSet = new XSet(a);
+        for (const bValue of b) {
+            if (a.has(bValue)) {
+                differenceSet.delete(bValue);
+            }
+        }
+        return differenceSet;
+    }
+
+    // 返回两个集合的对称差集
+    static symmetricDifference(a, b) {
+        // 按照定义，对称差集可以表达为
+        return a.union(b).difference(a.intersection(b));
+    }
+
+    // 返回两个集合（数组对形式）的笛卡儿积
+    // 必须返回数组集合，因为笛卡儿积可能包含相同值的对
+    static cartesianProduct(a, b) {
+        const cartesianProductSet = new XSet();
+        for (const aValue of a) {
+            for (const bValue of b) {
+                cartesianProductSet.add([aValue, bValue]);
+            }
+        }
+        return cartesianProductSet;
+    }
+
+    // 返回一个集合的幂集
+    static powerSet(a) {
+        const powerSet = new XSet().add(new XSet());
+        for (const aValue of a) {
+            for (const set of new XSet(powerSet)) {
+                powerSet.add(new XSet(set).add(aValue));
+            }
+        }
+        return powerSet;
+    }
+}
+
+const xs1 = new XSet([
+    1, 2, 3
+]);
+
+const xs2 = new XSet([
+    2, 3, 4
+]);
+
+console.log(XSet.union(xs1, xs2));          	// XSet(4) [Set] { 1, 2, 3, 4 }
+console.log(XSet.intersection(xs1, xs2));   	// XSet(2) [Set] { 2, 3 }
+console.log(XSet.difference(xs1, xs2));         // XSet(1) [Set] { 1 }
+console.log(XSet.difference(xs2, xs1));         // XSet(1) [Set] { 4 }
+```
+
+### WeakSet
+
+ES 6的**弱集合（weak set）**和弱映射类似，“弱”是对集合中值的描述。WeakSet 的 API 是 Set 的子集。元素只能是引用类型值。
+
+#### 弱值
+
+和弱键类似，弱值对其中元素的引用是弱引用，在值不存在其他引用后，弱值会被自动清除。以 DOM 元素为例：
+
+```html
+<div id="node">node</div>
+<script>
+    let node = document.getElementById('node');
+    const ws = new WeakSet([
+        node
+    ]);
+    console.log(ws);
+    setTimeout(() => {
+        node.remove();
+        node = null;
+        console.log(ws);
+    }, 2000);
+    // 浏览器的垃圾回收机制是按一定周期或在特定条件下进行的，因此弱集合内容并不一定会被马上清理
+    // 但是一旦失去引用，值就会在下一周期被清除
+</script>
+```
+
+#### 不可迭代值
+
+由于元素可能在任何时候被清除，没有必要向弱集合提供迭代功能和清除全部功能。
+
+>ES 的引用类型类似传统面向对象语言中的类，但有着不同的实现
+>
+>Object 是基础引用类型，其他引用类型都从 Object 派生
+>
+>ArrayBuffer 用于申请一块内存空间作为缓冲区，DataView 则是缓冲区的视图，只能通过视图操作缓冲区内存
+>
+>定型数组也称类型化数组，用于通过原生按一定数据类型规则操作内存读写
+>
+>Map 是比 Object 更高效的键值对数据类型，按键值对映射结构存储数据
+>
+>WeakMap 对键的引用是弱引用，实际只是对值的引用，垃圾回收不将其对键的弱引用视为引用
+>
+>Set 是集合数据类型，会自动剔除重复元素，数学集合运算可以在 Set 之上实现
+>
+>WeakSet 对值的引用是弱引用，不会影响垃圾回收
+
 ---
 
 ## 20 JavaScript API
@@ -2583,7 +3117,6 @@ Web 组件在各浏览器中的具体实现并不相同，且目前在页面组�
 模板内的内容并不会被渲染，DOM 查询方法也无法获取其中节点。模板的子节点被包含在其`DocumentFragment`节点内，可见于浏览器开发者工具：
 
 ```html
-
 <template id="foo">
     #document-fragment
     <p>I'm inside a template!</p>
@@ -2597,10 +3130,10 @@ console.log(document.getElementById('temp').content);   // document-fragment
 ```
 
 利用`DocumentFragment`可以向 DOM 中一次添加多个平级节点。如果多次调用`appendChild`会导致**每次添加都重新排列一次 DOM**，`DocumentFragment`由于本身不是一个 DOM
-节点对象，不会影响节点优化。在将`DocumentFragment`对象挂载到 DOM 上后，该对象的子节点会直接转移到 DOM 中，`DocumentFragment`成为一个**没有子节点的空节点**：
+节点对象，不会影响节点优化。在将`DocumentFragment`对象挂载到 DOM 上后，该对象的子节点会**直接转移**到 DOM 中，`DocumentFragment`成为一个**没有子节点的空节点**：
 
 ```js
-    const frag = new DocumentFragment();
+const frag = new DocumentFragment();
 
 frag.appendChild(document.createElement('p'));
 frag.appendChild(document.createElement('p'));
@@ -2616,7 +3149,7 @@ console.log(frag.children.length);          // 0
 
 ##### \<template>
 
-`<template>`与`DocumentFragment`一样，将其挂载到 DOM 中后其子节点会**直接转移**：
+`<template>`与`DocumentFragment`一样，将其`content`属性（即某个`DocumentFragment`对象的引用）挂载到 DOM 中后其子节点会**直接转移**：
 
 ```js
 const fooElement = document.querySelector('#foo');
@@ -2640,8 +3173,7 @@ console.log(document.body.innerHTML);
 // <tempate id="bar"></template>
 ```
 
-使用`document.importNode`方法可以**克隆**一个已经在 DOM 中的`DocumentFragment`对象，返回一个新的对象而不是引用，因此原模板中的内容不会消失。也可以使用`DocumentFragment`
-的`cloneNode()`方法进行克隆，该方法接收一个布尔值来决定深度还是浅度克隆：
+使用`document.importNode`方法可以**克隆**一个已经在 DOM 中的`DocumentFragment`对象，返回一个新的对象而不是引用，因此原模板中的内容不会消失。也可以使用`DocumentFragment`的`cloneNode()`方法进行克隆，该方法接收一个布尔值来决定深度还是浅度克隆：
 
 ```js
 const fooElement = document.querySelector('#foo');
@@ -2699,11 +3231,9 @@ console.log('Added template');
 
 ##### 创建影子 DOM 和可访问性
 
-一个 shadow DOM 通过 HTML 对象的`attachShadow()`方法创建，容纳 shadow DOM 的节点称为 **shadow host（影子宿主）**，shadow DOM 的根节点称为 **shadow
-root（影子根）**。
+一个 shadow DOM 通过 HTML 对象的`attachShadow()`方法创建，容纳 shadow DOM 的节点称为 **shadow host（影子宿主）**，shadow DOM 的根节点称为 **shadow root（影子根）**。
 
-`attachShadow()`接收一个`shadowRootInit`对象作参数，返回一个 shadow DOM 实例。`shadowRootInit`包含一个`mode`属性，指定为`'open'`时，可以通过 HTML
-元素的`shadowRoot`属性获取影子 DOM 的引用，为`'closed'`则不可获得。
+`attachShadow()`接收一个`shadowRootInit`对象作参数，返回一个 shadow DOM 实例。`shadowRootInit`包含一个`mode`属性，指定为`'open'`时，可以通过 HTML 元素的`shadowRoot`属性获取影子 DOM 的引用，为`'closed'`则不可获得。
 
 ```js
 document.body.innerHTML = `
@@ -2731,7 +3261,7 @@ for (let color of ['red', 'green', 'blue']) {
     const div = document.createElement('div');
     const shadowDOM = div.attachShadow({mode: 'open'});
     document.body.appendChild(div);
-// 为shadow dom添加内容，css仅在影子DOM内部有效
+	// 为shadow dom添加内容，css仅在影子DOM内部有效
     shadowDOM.innerHTML = `
     <p>Make me ${color}</p>
     <style>
@@ -2759,8 +3289,7 @@ setTimeout(() => document.querySelector('div').attachShadow({mode: 'open'}), 100
 
 影子 DOM 的优先级高于节点原来的内容，浏览器会优先渲染影子 DOM ，因为添加的影子 DOM 是空的，所以不会显示任何内容。
 
-如果需要让一些不属于影子 DOM 中的元素在影子 DOM 中渲染，需要使用`<slot>`，原先位于节点中的元素会被**投射（projection）**到影子 DOM 中，但实际上**还是位于外部影子宿主中**
-。从浏览器控制台中可以看到这种映射关系：
+如果需要让一些不属于影子 DOM 中的元素在影子 DOM 中渲染，需要使用`<slot>`，原先位于节点中的元素会被**投射（projection）**到影子 DOM 中，在影子 DOM 中渲染，但实际上文档结构**还是位于外部影子宿主中**。从浏览器控制台中可以看到这种映射关系：
 
 ```js
 document.querySelector('div')
@@ -2816,7 +3345,7 @@ shadowRoot.querySelector('button').addEventListener('click', ev => console.log(e
 host.addEventListener('click', (ev) => console.log(ev.target));
 host.querySelector('button').addEventListener('click', ev => console.log(ev.target));
 
-// 点击outer，两次打印均为<button>outer</button>，但第一次来源为button，第二次来源为div
+// 点击outer，两次打印均为<button>outer</button>，但第一次来源为button的事件回调，第二次来源为div的事件回调
 // 点击click，第一次打印为<button>click</button>，来源于button
 // 第二次打印为<div id="host">...</div>，事件被重定向到了外部，来源于div
 ```
@@ -2836,8 +3365,7 @@ console.log(document.querySelector('x-foo') instanceof HTMLElement); // true
 
 ##### 创建自定义元素
 
-自定义元素通过调用全局对象下的 **customElements** 属性（CustomElements 类型的对象）的`define`方法创建，该方法接收一个字符串和一个派生自`HTMLElement`
-构造函数（类）的对象（也可以不派生，会失去原生元素的属性）。字符串作为自定义元素名使用，要求必须**包含至少一个不在开头或结尾的连字符**，否则会抛出错误：
+自定义元素通过调用全局对象下的 **customElements** 属性（CustomElements 类型的对象）的`define`方法创建，该方法接收一个字符串和一个派生自`HTMLElement`构造函数（类）的对象（也可以不派生，会失去原生元素的属性）。字符串作为自定义元素名使用，要求必须**包含至少一个不在开头或结尾的连字符**，否则会抛出错误：
 
 ```js
 class FooElement extends HTMLElement {
@@ -2855,6 +3383,7 @@ console.log(document.querySelector('x-foo') instanceof FooElement); // true
 ```js
 class FooElement extends HTMLElement {
     constructor() {
+        // 必须调用基类构造函数
         super();
         console.log('x-foo')
     }
@@ -2896,7 +3425,7 @@ customElements.define('custom-el', CustomElement);
 让视图部分与 JavaScript 代码分离会更加清晰：
 
 ```html
-    <!-- 模板 -->
+<!-- 模板 -->
 <template id="custom-element">
     #shadow-root
     <p>This is a custom element.</p>
@@ -2953,6 +3482,7 @@ class CustomElement extends HTMLElement {
 
 customElements.define('custom-el', CustomElement);
 
+// 如有必要，可以导出该类并修改
 export default CustomElement;
 ```
 
@@ -2960,9 +3490,9 @@ export default CustomElement;
 
 自定义元素组件有5个**生命周期方法**：
 
-+ `constructor()`：在创建元素实例或将已有DOM 元素升级为自定义元素时调用。
-+ `connectedCallback()`：在每次将这个自定义元素实例添加到DOM 中时调用。
-+ `disconnectedCallback()`：在每次将这个自定义元素实例从DOM中移除时调用。
++ `constructor()`：在创建元素实例或将已有 DOM 元素升级为自定义元素时调用。
++ `connectedCallback()`：在每次将这个自定义元素实例添加到 DOM 中时调用。
++ `disconnectedCallback()`：在每次将这个自定义元素实例从 DOM中移除时调用。
 + `attributeChangedCallback(name, oldValue, newValue)`：在每次**可观察属性**的值发生变化时调用。在元素实例初始化时，初始值的定义也算一次变化。
 + `adoptedCallback()`：在通过document.adoptNode()将这个自定义元素实例移动到新文档对象时调用。
 
@@ -2990,8 +3520,7 @@ document.body.appendChild(fooElement);
 document.body.removeChild(fooElement);
 ```
 
-如果需要在元素属性变化后，触发 `attributeChangedCallback()`回调函数，必须监听该属性。这可以通过定义`observedAttributes()` get 函数来实现，`observedAttributes()`
-函数体内包含一个 return语句，返回一个数组，包含了需要监听的属性名称：
+如果需要在元素属性变化后，触发 `attributeChangedCallback()`回调函数，必须监听该属性。这可以通过定义`observedAttributes()` get 函数来实现，`observedAttributes()`函数体内包含一个 return 语句，返回一个数组，包含了需要监听的属性名称：
 
 ```js
 class CustomElement extends HTMLElement {
@@ -3003,8 +3532,7 @@ class CustomElement extends HTMLElement {
 
 ##### 反射自定义元素属性
 
-自定义元素应该是**响应式**的，对 DOM 的修改应该反映到 JavaScript 对象上。要进行 **JavaScript 至 DOM 间的反射**，常见的方法是使用 getter 和 setter；**DOM 至
-JavaScript** 间的反射则需要使用`observedAttributes()`添加**可观察属性**，可观察属性的值变化时会调用`attributeChangedCallback()`：
+自定义元素应该是**响应式**的，对 DOM 的修改应该反映到 JavaScript 对象上。要进行 **JavaScript 至 DOM 间的反射**，常见的方法是使用 getter 和 setter；**DOM 至 JavaScript** 间的反射则需要使用`observedAttributes()`添加**可观察属性**，可观察属性的值变化时会调用`attributeChangedCallback()`：
 
 ```js
 class Custom extends HTMLElement {
