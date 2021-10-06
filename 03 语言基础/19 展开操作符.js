@@ -10,8 +10,8 @@ arr[0] = 0;
 console.log(arr1);                        // [ [ 0, 2, 3 ], 4, 5, 6 ]
 console.log(arr2);                        // [ 1, 2, 3, 4, 5, 6 ]
 
-const obj1 = {name: 'obj1'};
+const obj1 = {obj: {name: 'obj1'}};
 const obj2 = {...obj1};
 obj2.name = 'obj2';
-console.log(obj1.name);                 // obj1
-console.log(obj2.name);                 // obj2
+console.log(obj1.obj.name);                 // obj1
+console.log(obj2.obj.name);                 // obj1
