@@ -1027,7 +1027,7 @@ let num = (5, 1, 4, 8, 0); // 0
 
 #### 展开操作符
 
-展开操作符`...`用于在函数调用与数组、对象构造时将数组表达式、字符串、对象展开，本质上是**深拷贝**。
+展开操作符`...`用于在函数调用与数组、对象构造时将数组表达式、字符串、对象展开，本质上是**浅拷贝**
 
 函数调用：
 
@@ -1050,14 +1050,14 @@ console.log(arr1);                        // [ [ 0, 2, 3 ], 4, 5, 6 ]
 console.log(arr2);                        // [ 1, 2, 3, 4, 5, 6 ]
 ```
 
-对象属性深拷贝：
+对象属性浅拷贝：
 
 ```js
-const obj1 = {name: 'obj1'};
+const obj1 = {obj: {name: 'obj1'}};
 const obj2 = {...obj1};
 obj2.name = 'obj2';
-console.log(obj1.name);                 // obj1
-console.log(obj2.name);                 // obj2
+console.log(obj1.obj.name);                 // obj1
+console.log(obj2.obj.name);                 // obj1
 ```
 
 ### 流程控制语句
@@ -3539,6 +3539,533 @@ console.log(g.next()); // { done: false, value: 3}
 > 迭代器必须实现 next 方法，此外有可选的 return 和 throw 用于终止迭代与向内部传递错误
 >
 > 原生结构语句与一些 API 会自动调用迭代器相关方法
+
+---
+
+## 08 对象、类与面向对象编程
+
+和其他面向对象语言不同，ECMAScript 将对象定义为**一组属性的无序集合**，每个属性和方法都用一个名称来标识。可以将对象看作一张**哈希表**，其中的内容就是**键值对**。
+
+### 对象
+
+创建自定义对象有两种方法，第一种是实例化一个空对象，然后在空对象上挂载属性和方法：
+
+```js
+let person = new Object();
+person.name = "Nicholas";
+person.age = 29;
+person.job = "Software Engineer";
+person.sayName = function() {
+	console.log(this.name);
+};
+```
+
+另一种方法是直接使用对象字面量创建，这种方式更高效：
+
+```js
+let person = {
+    name: "Nicholas",
+    age: 29,
+    job: "Software Engineer",
+    sayName() {
+    	console.log(this.name);
+    }
+};
+```
+
+#### 属性的类型
+
+ECMAScript 使用一些内部特性来描述属性的特征，开发者不能直接访问这些特征，但是可以在浏览器控制台中观察这些特征的打印结果。这些内部特性会用两个方括号包装起来表示，如`[[Enumerable]]`。
+
+##### 数据属性
+
+一些语言将**数据属性**称为字段。数据属性有一个保存数据值的位置，以及4个描述数据属性行为的**元属性**：
+
++ `[[Configurable]]`：表示属性是否可以通过`delete`关键字删除并重新定义、是否可以修改它的特性、是否可以更改为访问器属性。默认情况下自定义对象的属性的该属性值为 true，而大多数原生对象的该属性为 false
++ `[[Enumerable]]`：表示该属性是否为可枚举，即是否可以为 for-in 循环返回。默认情况下自定义对象的属性的该属性值为 true，而原生 Object 的原型上的属性的该属性为 false
++ `[[Writable]]`：表示该属性值是否可以被修改。默认情况下自定义对象的属性的该属性值为 true
++ `[[Value]]`：包含属性的值，没有初始化的属性值都为`undefined`
+
+要修改这些属性，需要调用`Obejct.defineProperty`方法，该方法接收三个参数：要定义属性的对象、属性名、和描述符对象。如果`[[Configurable]]`为 false，调用该方法会抛出错误。
+
+```js
+const steven = {};
+
+// 数据属性
+Object.defineProperty(steven, 'name', {
+    value: 'Steven',
+    configurable: true,
+    writable: false,
+    enumerable: true
+});
+```
+
+和字面量与直接挂载的方式不同，在调用Object.defineProperty()时，`configurable`、`enumerable` 和`writable` 的值如果不指定，默认会为 false 。
+
+##### 访问器属性
+
+一些语言将**访问器属性**称为属性，通过公有的属性访问私有的字段。访问器属性包含两个可选的**获取（getter）**和**设置（setter）**方法，以及两个属性：
+
++ `[[Configurable]]`：表示属性是否可以通过`delete`关键字删除并重新定义、是否可以修改它的特性、是否可以更改为数据属性，默认为 true
++ `[[Enumerable]]`：表示该属性是否为可枚举，即是否可以为 for-in 循环返回。默认情况下自定义对象的属性的该属性值为 true
++ `[[Get]]`：getter，返回属性实际值，默认为`undefined`
++ `[[Set]]`：setter，设置属性实际值，默认为`undefined`
+
+访问器属性**只能**通过`Obejct.defineProperty`定义：
+
+```js
+// 访问器属性
+steven._age = undefined;
+Object.defineProperty(steven, 'age', {
+    get() {
+        return `age: ${this._age}`;
+    },
+    set(v) {
+        if (typeof v === "number") {
+            this._age = v;
+        }
+    }
+});
+steven.age = 21;
+console.log(steven.age);                // age: 21
+```
+
+如果一个访问器属性没有 setter，则是只读的，尝试修改将会忽略；如果没有 getter，则不可访问，尝试获取返回 undefined，严格模式下抛出错误。
+
+#### 定义多个属性
+
+`Object.defineProperties()`可以用来定义多个对象的属性，第一个参数为要定义的属性，第二个参数为一个对象，包含要定义的属性与描述符的键值对：
+
+```js
+let book = {};
+Object.defineProperties(book, {
+    year_: {
+    	value: 2017
+    },
+    edition: {
+    	value: 1
+    },
+    year: {
+    	get() {
+    		return this.year_;
+    	},
+        set(newValue) {
+    		if (newValue > 2017) {
+    			this.year_ = newValue;
+    			this.edition += newValue - 2017;
+    		}
+    	}
+    }
+});	
+```
+
+#### 读取属性的特性
+
+虽然属性的特性没有办法被直接访问，但是通过`Object.getOwnPropertyDescriptor()`方法可以获取属性的描述符：
+
+```js
+// 获取属性描述符
+console.log(Object.getOwnPropertyDescriptor(steven, 'age'));
+// {
+//   get: [Function: get],
+//   set: [Function: set],
+//   enumerable: false,
+//   configurable: false
+// }
+```
+
+ES 8中还提出了`Object.getOwnPropertyDescriptors()`，用于获得所有属性的描述符：
+
+```js
+console.log(Object.getOwnPropertyDescriptors(steven));
+// {
+//   name: {
+//     value: 'Steven',
+//     writable: false,
+//     enumerable: true,
+//     configurable: true
+//   },
+//   _age: { value: 21, writable: true, enumerable: true, configurable: true },
+//   age: {
+//     get: [Function: get],
+//     set: [Function: set],
+//     enumerable: false,
+//     configurable: false
+//   }
+// }
+```
+
+#### 合并对象
+
+有时需要将两个对象合并（merge），这种操作也称为混入（mixin）。
+
+`Object.assign()`用于合并两个对象，这个方法接收一个目标对象和一个或多个源对象作为参数，然后将每个源对象中**可枚举**（`Object.propertyIsEnumerable()`返回 true）和**自有**（`Object.hasOwnProperty()`返回 true）属性复制到目标对象。以字符串和符号为键的属性会被复制。对每个符合条件的属性，这个方法会使用源对象上的`[[Get]]`取得属性的值，然后使用目标对象上的`[[Set]]`设置属性的值。
+
+该方法会**直接**将源对象组合并到目标对象，而不是返回一个合并结果对象，将返回目标对象的引用。如果遇到同名属性，则保留**最后一个**同名属性值。此外，这种复制是一种**浅拷贝**：
+
+```js
+const a = {
+    name: 'a',
+    a: 'a',
+    obj: {
+        name: 'a obj'
+    }
+}
+
+const b = {
+    name: 'b',
+    b: 'b',
+    obj: {
+        name: 'b obj'
+    }
+}
+
+Object.assign(a, b);
+
+console.log(a);                         // { name: 'b', a: 'a', obj: { name: 'b obj' }, b: 'b' }
+b.b = 'B';
+b.obj.name = 'B OBJ';
+console.log(a);                         // { name: 'b', a: 'a', obj: { name: 'B OBJ' }, b: 'b' }
+```
+
+#### 对象相等判定
+
+使用全等判断操作符能解决大部分相等判断问题，但在不同的 JavaScript 引擎中可能有不同。并且判断`NaN`需要调用全局对象下的一个方法：
+
+```js
+// 不同引擎中的结果不一定相同
+console.log(0 === -0);          // true
+console.log(0 === +0);          // true
+console.log(+0 === -0);         // true
+
+// 判断NaN
+console.log(NaN === NaN);       // false
+console.log(isNaN(NaN));        // true
+```
+
+`Object.is()`方法可以改善一些情况：
+
+```js
+console.log(Object.is(0, -0));          // false
+console.log(Object.is(0, +0));          // true
+console.log(Object.is(+0, -0));         // false
+
+console.log(Object.is(NaN, NaN));       // true
+```
+
+#### 增强的对象语法
+
+ES 6增强了对象语法，可以是代码变得更加简洁。
+
+同名属性值简写：如果要用一个变量在对象字面量中初始化一个属性，且两者是同名的，可以直接简写：
+
+```js
+let name = 'Steven';
+let person = {
+    name
+};
+console.log(person);            // { name: 'Steven' }
+```
+
+动态命名属性：对象字面量初始化中的属性名现在可以动态指定，即字面量中的属性名可以是一个表达式，用中括号语法包围一个将返回 Number、String 或 Symbol 类型值的表达式。注意，如果表达式内部出错，对象创建将终止。
+
+```js
+let ageTag = 'a' + 'g' + 'e';
+
+person = {
+    ['name']: 'Steven',
+    [ageTag]: 21
+};
+console.log(person);
+```
+
+方法简写：方法不再需要使用`function`声明：
+
+```js
+let person = {
+    sayName(name) {
+    	console.log(`My name is ${name}`);
+    }
+};
+```
+
+#### 对象解构
+
+ES 6新增对象解构语法。解构语法中分**模式**和**变量**，声明的是变量，而模式则是对象属性的引用，在字面两中体现为冒号前的是模式，冒号后的是变量，不管在多复杂的解构语句中，声明的变量永远在冒号后面。如果模式和变量同名则不用特别引用：
+
+```js
+let obj = {
+    name: 'obj',
+    value: 10
+}
+
+let {name /*模式*/: objName /*变量*/, value} = obj;
+console.log(objName);
+console.log(value);
+```
+
+解构还可以同时指定默认值，避免解构失败无返回：
+
+```js
+let obj1 = {
+    name: 'obj1'
+};
+let obj2 = {};
+let {name: name1} = obj1;
+let {name: name2 = 'obj2'} = obj2;
+console.log(name1);
+console.log(name2);
+```
+
+解构语句的右值在解构前会被转换成对象，因此原始值也会被包装，但是不能对`null`和`undefined`解构：
+
+```js
+let {length} = 'string';
+console.log(length);                    // 6
+
+let { constructor: c } = 4;
+console.log(c === Number);              // true
+```
+
+变量的声明不一定要在解构语句中，但是如果要给一个声明过的变量从解构中赋值，解构语句需要被括号包裹：
+
+```js
+({name: objName} = obj);
+```
+
+解构是一种**浅拷贝**：
+
+```js
+let {v, v: {value: vv}} = obj3;
+obj3.v.value = 20;
+console.log(vv);                        // 10
+console.log(v);                         // { value: 20 }
+```
+
+假如解构过程中发生错误，会停止解构。
+
+解构还可以用在函数原型中：
+
+```js
+let obj = {
+    name: 'obj',
+    value: 10
+};
+const fun = ({name}) => console.log(name);
+fun(obj);                       			// obj
+```
+
+### 复用对象
+
+在 ES 6之前，复用对象有以下几种方式：
+
++ 工厂模式
++ 构造函数模式
++ 原型模式
++ 对象迭代
+
+在 ES 6中新推出了类语法，虽然本质上是构造函数模式和继承的一种语法糖，但是建议之后都使用类语法进行面向对象编程，原先的几种模式都存在一些问题。可以说，虽然 ES 6之前能够面向对象地编程，但 ES 的面向对象机制始终是不完整的，甚至到 ES 2020 都还没有提出完整的面向对象编程方式，ES 中的面向对象只能是一种模拟，而一些保留的关键字将为未来 ES 的面向对象做准备。下方介绍 ES 6之前的对象复用模式。
+
+#### 工厂模式
+
+工厂模式是设计模式的一种，通过用户输入决定最终组装对象的组成。在 ECMAScript 中，基本思想是让一个函数接收几个用户参数，然后在函数内部组装一个新对象并返回：
+
+```js
+const createPerson = (name, age) => {
+    const p = {
+        name,
+        age
+    };
+
+    // 注意this指向
+    p.sayHello = function () {
+        console.log(this.name);
+    }
+
+    return p;
+};
+
+let steven = createPerson('Steven', 20);
+steven.sayHello();                      // Steven
+console.log(typeof steven);             // object
+```
+
+工厂模式虽然能复用对象，但是**没有解决对象标识的问题**，即没有类型。
+
+#### 构造函数模式
+
+构造函数模式和工厂模式由一些不同：
+
++ 函数内没有显示创建对象
++ 对象的属性和方法直接赋值给 this
++ 没有 return
++ 依照规范，构造函数大驼峰命名
+
+```js
+// 注意this指向，表达式中的this指向Global，因此不要尝试用lambda创建构造函数
+// 构造函数中的this指向构造函数自身，而普通函数中的this也指向Global
+function Person(name, age) {
+    this.name = name ?? 'unknown';
+    this.age = age ?? 0;
+    this.sayHello = function () {
+        console.log(this.name);
+    }
+}
+
+// new
+const steven = new Person('Steven', 20);
+const anonymous = new Person();
+steven.sayHello();                  // Steven
+anonymous.sayHello();               // unknown
+console.log(typeof steven);         // object
+```
+
+在使用构造函数实例化一个对象时，`new`关键字做了以下**事情**：
+
+1. 在内存中创建一个新对象
+2. 新对象内部的`[[Prototype]]`被赋值为构造函数的`prototype`属性（这就是为什么这些属性实际挂载到了对象上的原因）
+3. 构造函数中的`this`被赋值为新对象的引用（这就是为什么可以在构造函数中访问对象原型链上的属性）
+4. 执行构造函数中的代码
+5. 如果构造函数返回非空对象，则返回这个非空对象（此时构造函数实际上不是构造函数）；否则返回新对象
+
+构造函数构造的对象将有一个`constructor`属性，这个属性将**指向**构造函数：
+
+```js
+console.log(steven.constructor === Person);         // true
+```
+
+`constructor`确实能用来标识对象类型，但是使用`instanceof`操作符**判断对象类型**更可靠：
+
+```js
+console.log(steven instanceof Person);              // true
+```
+
+构造函数和普通函数的唯一区别在于调用方式的不同，如果不使用`new`关键字调用构造函数就和调用普通函数一样，因为**构造函数也是普通函数**。普通函数中的 this 将**始终指向**`Global`对象，在全局作用域下不使用`new`调用按照构造函数模式创建的函数会让一些属性被挂载到`Global`，在浏览器中为`window`对象上：
+
+```js
+// 普通函数中的this永远指向Global对象，而不是上下文
+function f1() {
+    console.log(this);          // Global
+}
+
+function f2() {
+    (function () {
+        console.log(this);      // 依旧是Global
+    })()
+}
+
+f1();
+f2();
+```
+
+构造函数的主要问题是其内部代码会在构造每个对象时都被执行一遍，包括函数对象的挂载。在其他面向对象语言中，静态成员和成员函数都只会被初始化一次，而 ES 中的函数也是对象，每次调用构造函数都会创建一个函数对象并挂载：
+
+```js
+console.log(steven.sayHello === anonymous.sayHello);        // false
+```
+
+解决这个问题的办法是将函数定义在构造函数外部并在构造函数内部引用它，但这会导致外部上下文中的标识符问题，还可能会被误调用。要解决这个问题需要使用原型模式。
+
+#### 原型模式
+
+原型模式也是一种设计模式，该设计模式的基本思想是在需要时通过复制原型来创建一个新对象，并在这个对象上添加新的成员，从而减少不必要的类定义。这也是为什么ES 中实际上**没有类**的概念的原因。ES 不是完整的面向对象语言，因此使用原型来模拟类。
+
+每个**函数**都会创建一个唯一的**原型对象**`prototype`，这个对象包含特定引用实例将**共享**的属性和方法，类似静态成员。调用构造函数时`new`关键字会将函数的原型对象引用赋值给创建的对象的原型，因此起到共享的作用：
+
+```js
+function Person(name, age) {
+    this.name = name;
+    this.age = age;
+}
+
+// 函数原型上挂载的方法中的this指向函数，这个this在调用构造函数时会被重新指向新创建的对象
+Person.prototype.sayHello = function () {
+    console.log(this.name);
+}
+
+const steven = new Person('Steven', 20);
+const bob = new Person('Bob', 18);
+steven.sayHello();                                      // Steven
+bob.sayHello();                                         // Bob
+console.log(steven.sayHello === bob.sayHello);          // true
+```
+
+##### 原型
+
+###### 函数的原型
+
+在创建函数对象时，**始终**会为该函数创建一个`prototype`**属性**，并指向一个`Prototype`对象。该原型对象会自动获得一个`constructor`**属性**，并且该属性会自动指向与之关联的构造函数。
+
+在自定义构造函数时，原型对象默认只会有`constructor`属性，原型对象上的其他所有方法都**继承自**`Object`函数的原型（`Object`本身也有一个`constructor`属性，这个属性不会被继承。此外`Object`的原型的原型是`null`）。
+
+###### 对象的原型
+
+而每个**实例**被创建时，实例内部的`[[Prototype]]`指针会指向相对应的构造函数的`prototype`。在实例中**无法访问**这个`[[Prototype]]`，ES 规范没有定义访问实例中该属性的方法，但是浏览器中的 JavaScript 可能会在实例上提供一个`__proto__`属性来访问对象的原型。
+
+###### 对象实例和构造函数的关系
+
+因此，实例和构造函数的关系**仅在**它们拥有同一个**原型对象**`Prototype`的引用上，在函数中它为`prototype`，在实例对象中它为`[[Prototype]]`。两者之间**没有**其他任何关系。
+
+###### 原型和对象实例的关系
+
+原型和对象实例的关系**仅在**对象实例内部的`[[Prototype]]`属性引用了原型，可以**通过对象实例直接访问原型上的成员**，以及实例对象方法体中的`this`也可以访问原型上的成员。
+
+###### 原型和构造函数的关系
+
+当函数被创建时，也会创建一个`Prototype`**原型对象**，函数的`prototype`属性会指向该原型对象，两者的**生命周期**是相同的。
+
+###### 判断原型
+
+构造函数的`prototype.isPrototypeOf()`用于判断给定参数是否和实例对象是同一个原型。注意**必须通过原型调用**该方法，否则调用的将会是`Object.prototype.isPrototypeOf()`，大部分情况这将返回`false`：
+
+```js
+console.log(Person.isPrototypeOf(bob));              // false，实际上调用了Object.prototype.isPrototypeOf()
+console.log(Person.prototype.isPrototypeOf(bob));    // true
+```
+
+###### 获取原型
+
+内部属性`[[Prototype]]`无法直接访问，但是可以通过`Object.getPrototypeOf()`获取原型对象的引用： 
+
+```js
+console.log(Object.getPrototypeOf(steven) === Person.prototype);        // true
+console.log(Object.getPrototypeOf(steven).sayHello);                    // Function
+```
+
+###### 重写原型
+
+`Object.setPrototypeOf()`方法可以重写一个对象的原型，但是因为会改变所有共享原型对象的状态，这个方法的调用可能会严重影响代码性能。第一个参数为要被重写的对象，第二个参数为用于重写的原型对象。
+
+```js
+// 重写原型
+let obj1 = {
+    name: 'obj1'
+}
+let obj2 = {
+    value: 10
+}
+
+Object.setPrototypeOf(obj1, obj2);
+console.log(Object.getPrototypeOf(obj1));           // { value: 10 }，obj2成为了一个原型对象
+```
+
+###### 指定原型创建对象
+
+`Object.create()`方法用于将一个指定的对象作为原型来创建一个新的对象，该方法接收一个必选参数作为新对象的原型：
+
+```js
+// 指定原型创建对象
+let normalObj = Object.create(Object.prototype);
+console.log(Object.getPrototypeOf(normalObj) === Object.prototype);     // true
+let nullObj = Object.create(null);
+console.log(Object.getPrototypeOf(nullObj));                            // null
+let person = Object.create(Person.prototype);                           // 相当于调用构造函数
+console.log(Person.prototype.isPrototypeOf(person));                    // true
+```
+
+##### 原型层级
+
+
 
 ---
 
