@@ -3923,12 +3923,12 @@ console.log(typeof steven);         // object
 在使用构造函数实例化一个对象时，`new`关键字做了以下**事情**：
 
 1. 在内存中创建一个新对象
-2. 新对象内部的`[[Prototype]]`被赋值为构造函数的`prototype`属性（这就是为什么这些属性实际挂载到了对象上的原因）
-3. 构造函数中的`this`被赋值为新对象的引用（这就是为什么可以在构造函数中访问对象原型链上的属性）
+2. 新对象内部的`[[Prototype]]`被赋值为构造函数的`prototype`属性（函数也是对象，其`prototype`为`Object.prototype`的引用）
+3. 构造函数中的`this`被赋值为新对象的引用（这就是为什么这些属性实际挂载到了对象上的原因）
 4. 执行构造函数中的代码
 5. 如果构造函数返回非空对象，则返回这个非空对象（此时构造函数实际上不是构造函数）；否则返回新对象
 
-构造函数构造的对象将有一个`constructor`属性，这个属性将**指向**构造函数：
+构造函数构造的对象的原型上将有一个`constructor`属性，这个属性将**指向**构造函数：
 
 ```js
 console.log(steven.constructor === Person);         // true
@@ -4065,7 +4065,495 @@ console.log(Person.prototype.isPrototypeOf(person));                    // true
 
 ##### 原型层级
 
+如前面所说，通过对象引用可以访问到对象`[[Prototype]]`上的属性与方法，这是因为在 ECMAScript 中访问对象属性时有一种**层级关系**，这个关系类似于作用域链，有就近访问的特性。当访问对象的属性或方法时，ES 会：
 
++ 寻找对象本身是否有该属性或方法，如果有则返回
++ 如果对象本身没有该属性或方法，查找原型上是否有，如果有则返回
++ 如果对象的原型对象上也没有该属性或方法，查找对象的原型对象是否有`[[Prototype]]`属性，如果有，查找原型对象的原型上是否有该属性或方法，有则返回
+
+因此，当对象上有和其原型上同名的成员时，对象上的成员会**遮蔽（shadow）**原型上的成员，在其他面向对象语言中也叫做**隐藏**。
+
+```js
+let obj1 = {
+    name: 'obj1',
+    value: 10,
+};
+
+Object.defineProperty(obj1, '_value', {
+    enumerable: false,
+    value: 20
+})
+
+let obj2 = Object.create(obj1);
+obj2.name = 'obj2';                 // 遮蔽
+
+let obj3 = Object.create(obj2);
+obj3.name = 'obj3';                 // 遮蔽
+
+console.log(obj1.name);             // obj1
+console.log(obj2.name);             // obj2
+console.log(obj3.name);             // obj3
+
+console.log(obj3.value);            // 10，相当于obj3[[Prototype]][[Prototype]].value
+console.log(Object.getPrototypeOf(Object.getPrototypeOf(obj3)).value);      // 10
+console.log(obj3._value);           // 20，不可枚举但可访问
+```
+
+因为对象引用语句（包括 for-in 结构）会隐式访问原型上的成员，可以使用`Object.hasOwnProperty()`实例方法检测一个成员是否为实例的成员：
+
+```js
+// 对象引用和for-in语句会将原型上的成员（[[Enumerable]]属性为true）也遍历出来
+for (let v in obj3) {
+    console.log(v);
+    // name
+    // value
+}
+
+// 检查是否是为自身成员而非原型成员
+for (let v in obj3) {
+    if (obj3.hasOwnProperty(v)) console.log(v);
+    // name
+}
+```
+
+#### 其他注意事项
+
+##### 使用对象字面量来设置函数的原型
+
+为构造函数指定原型时，如果每个表达式只为原型指定一个成员，每次都会重写所有相关对象的原型。为了程序运行效率，在**初次**为原型定义多个成员时，且对应的构造函数**没有进行原型链继承时**，考虑使用对象字面量：
+
+```js
+function Person() {}
+Person.prototype = {
+    name: "Steven",
+    age: 20,
+};
+```
+
+但是这么做有一个**问题**，函数原型在创建时会被自动赋予一个`constructor`属性，使用对象字面量赋值相当于使用一个新的对象覆盖原型，因此新原型不会包含指向构造函数的`constructor`。虽然`instanceof`关键字仍然可以正确判断实例对应的构造函数，但是无法通过`constructor`判别。
+
+如果`constructor`属性很重要，则可以手动在字面量中指定，但其`[[Enumerable]]`会为 true，默认`constructor`是不可枚举的。要避免这个问题，使用`Object.defineProperty()`。
+
+##### 原型是动态的
+
+任何对象上的`[[Prototype]]`属性都是一个引用，因此对对象公有的原型进行修改会反应到所有原型上。
+
+而实例的原型永远指向已经存在的`Prototype`对象，并不会随着构造函数原型的覆盖而重新指向新的原型对象，也就是说对原型对象的**直接覆盖不是一种重写**。因此，在使用对象字面量覆盖构造函数原来的原型时，在覆盖之前创建的实例并不能访问这个新原型对象上的成员：
+
+```js
+function Person() {}
+let man = new Person();
+Person.prototype = {
+    name: 'Steven',
+    age: 20,
+    sayName() {
+        console.log(this.name);
+    }
+};
+Object.defineProperty(man,'constructor', {
+    value: Person,
+    enumerable: false
+});
+man.sayName(); // 错误
+```
+
+尽量**只在作初始化工作时**用字面量覆盖原型，而不是已经有实例被创建后。
+
+##### 修改原生对象的原型
+
+所有原生引用类型都在其原型上定义了静态方法，通过在这些引用类型构造函数上追加成员，可以在整个全局上下文中任意位置调用他们。但是**不推荐在生产环境中这么做**，因为这样做很可能会导致命名冲突，假如未来的 ES 标准定义了同名接口，代码就会出错。
+
+##### 原型的问题
+
+原型模式本是面向对象设计模式的一种，可以减少类的定义并动态产生对象，是对面向对象的一种功能性扩充。但是使用原型模式并不能完全地模拟面向对象，即使一些解释器内部逻辑有类似面向对象的地方（如隐藏类），这些问题可能会在将来的 ES 标准中讨论并解决。
+
+### 对象成员迭代
+
+#### in 和 for-in
+
+`in`操作符既可以在 for-in 结构中使用，也可以单独使用。`in`是一个**二元操作符**，期待两个参数：对象成员的键值或引用与对象的引用变量。只要可以通过对象访问到该成员（**无论**是否为对象成员或原型上的成员），就返回 true：
+
+```js
+let obj1 = {
+    name: 'obj1',
+    value: 10,
+};
+
+let obj2 = Object.create(obj1);
+obj2.name = 'obj2';
+
+console.log('name' in obj2);            // true
+console.log('value' in obj2);           // true
+```
+
+可以利用`in`和`hasOwnProperty()`来判断可以访问的一个成员是否为原型上的成员（包括同名覆盖时）：
+
+```js
+// 检测访问到的成员是否为原型上的成员
+let hasPrototypeProperty = (obj, ref) => !obj.hasOwnProperty(ref) && ref in obj;
+
+console.log(hasPrototypeProperty(obj2, 'name'));        // false
+console.log(hasPrototypeProperty(obj2, 'value'));       // true
+```
+
+`in`也能访问原型上`[[Enumerable]]`为 false 的不可枚举成员，但是 for-in 不会将其遍历。
+
+#### Object.keys()
+
+`Object.keys()`可以获得一个对象**自身可枚举的成员**键值的数组，不包括原型上的成员，可以用来代替 for-in ：
+
+```js
+let obj1 = {
+    name: 'obj1',
+    value: 10
+}
+
+Object.defineProperty(obj1, '_value', {
+    enumerable: false
+})
+
+let obj2 = Object.create(obj1);
+obj2.name = 'obj2';
+obj2.say = () => console.log('obj2');
+Object.defineProperty(obj2, '__value', {
+    enumerable: false,
+    value: 20
+});
+console.log(Object.keys(obj2));                 // [ 'name', 'say' ]
+```
+
+#### Object.getOwnPropertyNames()
+
+`Object.getOwnPropertyNames()`用于获取**所有对象自身成员**对应的键值，与是否可枚举无关，可以用来代替 for-in ：
+
+```js
+console.log(Object.getOwnPropertyNames(obj2));                 // [ 'name', 'say', '__value' ]
+```
+
+#### 关于枚举顺序
+
+for-in 循环和`Object.keys()`的枚举顺序是**不确定**的，取决于解释器引擎，而`Object.getOwnPropertyNames()`、`Object.getOwnPropertySymbols()`和`Object.assign()`（成员复制顺序）的枚举顺序是确定性的。
+
+#### Object.values()
+
+`Object.values()`接收一个对象，并返回可枚举成员的值的数组，值为**浅拷贝**，符号属性会被忽略：
+
+```js
+let obj = {
+    name: 'obj',
+    value: 10,
+    say() {},
+    [Symbol('private')]: 'private'
+}
+
+Object.defineProperty(obj, '_value', {
+    value: 20,
+    enumerable: false
+});
+
+console.log(Object.values(obj));        // [ 'obj', 10, [Function: say] ]
+```
+
+#### Object.entries()
+
+`Object.entries()`接收一个对象，并返回可枚举成员的键值对数组，值为**浅拷贝**，符号属性会被忽略：
+
+```js
+let obj = {
+    name: 'obj',
+    value: 10,
+    say() {},
+    [Symbol('private')]: 'private'
+}
+
+Object.defineProperty(obj, '_value', {
+    value: 20,
+    enumerable: false
+});
+
+console.log(Object.entries(obj));        // [ [ 'name', 'obj' ], [ 'value', 10 ], [ 'say', [Function: say] ] ]
+```
+
+### 继承
+
+即使原型模式下的面向对象不完整，也没有原生操作能够快速进行实现**继承**（实际上 Node.js 的 util 库中有一个方法`inherits`用于快速实现继承），并且不存在接口继承，因为 ECMAScript 中的函数没有签名（一些语言中称为函数原型）。因此实现继承成为了 ES 中的唯一继承方式，在 ES 6前，有一些办法来模拟类的实现继承。事实上这部分可以直接跳过，因为 ES 6`extends`操作符更加强大，没有必要再去使用过时的方法，但是考虑到可能的旧项目维护问题，也可以阅读此节。
+
+#### 原型链
+
+ECMAScript 将**原型链**定义为主要的继承方式。其主要思想是通过原型继承多个引用类型的属性和方法。
+
+```js
+function Base() {
+    this.name = 'Base';
+}
+
+function Derived() {
+    this.name = 'Derived';
+}
+
+// 继承
+Derived.prototype = new Base();
+
+let b = new Base();
+let d = new Derived();
+console.log(b.name);            // Base
+console.log(d.name);            // Derived
+```
+
+继承语句中发生了：
+
+1. 创建了一个 Base 类型对象（base）
+2. base 的原型指向了 Base 的原型，即 Object 的原型
+3. Base 函数体中的 this 指向 base，挂载实例成员
+4. Derived 的原型被指定为 base，因此 Derived 实例化的对象将拥有和 Base 一样的实例成员（变为新对象原型上的静态成员）和原型
+
+前面已经提高过**原型层级**关系，在引用对象成员时，会通过原型链不断查找所有原型链中对象上是否存在引用的对象。关于原型链，还有一些需要关注的地方。
+
+##### 默认原型
+
+默认情况下，所有原型都继承自`Object`构造函数（或者说类），这也是通过原型链实现的：
+
+```js
+let obj = {};
+console.log(Object.getPrototypeOf(obj) === Object.prototype);   // true
+```
+
+除非这么做：
+
+```js
+let obj = Object.create({});
+console.log(Object.getPrototypeOf(obj) === Object.prototype);   // false
+```
+
+事实上使用任意一个对象（除了构造函数`Object()`的`prototype`外）作参数都有同样效果，因为`Object.create()`接收的参数会作为创建的对象的原型对象。如果这么做，新建的对象就不是继承自`Object`了。但是**不建议在生产环境中这么做**，因为有太多的情况下我们会在任意一个可能的对象上调用`Object.prototype`中的成员，这么做很容易引发运行时错误，并且基本没有人会对`Object.prototype`上的成员做空检查。
+
+##### 原型链与继承关系
+
+`instanceof`操作符会在指定参数能在指定对象上被调用时返回 true，而在正常情况下构造函数位于原型链中，因此使用任意一基类（或者说继承的构造函数）标识符进行检测，都能得到 true。
+
+第二种检查继承关系的方法则是使用`Object.isPrototypeOf()`实例方法，当参数位于原型链中时返回 true。
+
+##### 虚方法重写
+
+如果要实现类似虚函数重写的效果（也称函数覆盖），重写基类虚函数（在 ES 中为原型链上的方法）的函数也必须定义在新的构造函数的原型上，否则当新的构造函数被继承时其派生构造函数创建的对象还是会访问到原型链中之前的方法。即：**虚方法重写（函数覆盖）必须在原型链上进行**。
+
+此外，这些方法还需等到原型链继承语句执行后再挂载到原型链上，否则也会被覆盖：
+
+```js
+Derived.prototype = new Base();
+
+// 继承后再挂载
+Derived.prototype.say = function () {};
+```
+
+##### 原型链断裂
+
+在复用对象一节的其他注意事项中已经说明，对象的`[[Prototype]]`属性引用的是被创建时的原型对象，而不会自动指向新覆盖函数原型的原型对象。如果直接覆盖函数原型对象，会导致接下来实例化的对象的原型链断裂。
+
+##### 原型链的其他问题
+
+一般在原型链上定义属性来模拟静态属性，当静态属性为引用类型值时需要注意对其他已存在对象的影响，就像对待静态属性一样。而原型链继承会导致被继承的构造函数中定义的所有成员都变成静态成员，无法进行实例成员继承。
+
+此外，仅靠原型链，派生类对象实例化时无法向基类构造函数传递参数，因为构造函数继承语句发生在构造函数定义上。
+
+#### 盗用构造函数
+
+为了解决实例成员继承的问题，可以使用一种叫作**盗用构造函数（constructor stealing）**的方法，这种方法也被称为**对象伪装**或**经典继承**。其基本思路是派生类将在构造函数中调用基类构造函数，就像“经典”面向对象语言中的做的那样。
+
+通过调用函数的`call()`或`apply()`方法，改变派生类构造函数中基类构造函数的内部 this 指向，并向基类构造函数传递参数：
+
+```js
+function Base(name) {
+    this.name = name;
+    this.type = 'Base';
+}
+
+function Derived(name) {
+    // 改变Base函数体内部this指向
+    Base.call(this, name);
+    this.type = 'Derived';
+}
+
+let obj = new Derived('obj');
+console.log(obj.name);                  // obj
+```
+
+盗用构造函数的**问题**很明显，无法继承基类构造函数原型链上的成员，因为在派生类构造函数中挂载的只有基类构造函数体内的成员，基类构造函数是作为普通函数调用的，不存在`new`将要执行的过程。而且基类和派生类实际上并没有继承关系，`instanceof`无法进行类型判别：
+
+```js
+console.log(obj instanceof Base);       // false
+```
+
+#### 组合继承
+
+过去 JavaScript 中使用的最多的继承模式是**组合继承**，组合继承即使用原型链继承，也使用盗用构造函数模式，既可以向基类构造函数传参，又可以继承实例和静态成员：
+
+```js
+function Base(name = 'base') {
+    this.name = name;
+}
+
+function Derived(name) {
+    // 继承实例成员
+    Base.call(this, name);
+}
+
+// 继承静态成员
+Derived.prototype = new Base();
+
+Base.prototype.say = function () {
+    console.log(this.name);
+};
+Base.prototype.type = 'Base';
+
+let obj = new Derived('obj');
+console.log(obj.name);                  // obj
+obj.say();                              // obj
+console.log(obj.type);                  // Base
+```
+
+组合继承虽然弥补了两种方式的不足，但也带来另一个问题：不仅将基类构造函数中的定义的成员继承了过来，还把这些成员变成了原型上的成员，虽然访问时并不会有语义和指向问题，但是浪费了一些运行资源：
+
+```js
+// 原型和实例中都有name属性
+console.log(Object.getPrototypeOf(obj).name);   // base
+console.log(obj.name);                          // obj 
+```
+
+#### 原型式继承
+
+这种方法来自于 Douglas Crockford 的一篇文章：《JavaScript 中的原型式继承》（[Prototypal Inheritance inJavaScript](https://www.crockford.com/javascript/prototypal.html)）。该方法不涉及全局上的构造函数的定义，只会涉及到一个临时的构造函数。原型式继承需要使用下方函数：
+
+```js
+function object(o) {
+    function F() {}
+    F.prototype = o;
+    return new F();
+}
+```
+
+使用时：
+
+```js
+let person = {
+    name: "Nicholas",
+    friends: ["Shelby", "Court", "Van"]
+};
+let anotherPerson = object(person);
+anotherPerson.name = "Greg";
+anotherPerson.friends.push("Rob");
+let yetAnotherPerson = object(person);
+yetAnotherPerson.name = "Linda";
+yetAnotherPerson.friends.push("Barbie");
+console.log(person.friends); // "Shelby,Court,Van,Rob,Barbie"
+```
+
+这种方式其实和`Object.create()`的设计一样，ES 5将原型式继承进行了规范化，一般只有在非常老的项目中会见到这种方法的使用。Douglas Crockford 还提出了寄生式继承，并有对其的改进方式寄生式组合继承，这两种方法在实践中并不常见，可以参考《Professional JavaScript for Web Developers》的8.3.5和8.3.6节。
+
+### 类
+
+终于，ECMAScript 6中正式提出了`class`关键字，用于在 ES 中编写传统面向对象风格的面向对象程序。相关的操作符极大的简化了 ES 中的面向对象实现，虽然这也只是一种由解释器提供并进行了内部优化的语法糖，最后的程序员实际能看到的还是原型模式下的结构。如果要进行面向对象风格的编程，最好使用相关操作符。
+
+#### 类的定义
+
+类声明语句和函数声明语句类似，有表达式和声明两种类型：
+
+```js
+// 类声明
+class Person {}
+// 类表达式
+const Animal = class {};
+```
+
+但是和函数表达式不同，类声明语句**不会**进行变量提升，只能在声明后被引用。并且函数受函数作用域限制，**类受块作用域限制**，也会引起重定义错误。
+
+下面介绍类的组成部分，会包含一些较新的特性，截至这部分内容撰写时（2021.10.10）一些老版本浏览器（甚至包括最新版本）可能没有实现。关于类的后续动态可以关注该页面：[MDN 类](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Classes)。
+
+#### 静态成员初始化块
+
+类的静态成员初始化块（Class static initialization blocks）是 ES 13（ES 2022）提议中的一部分，用于初始化静态成员，有些类似于一些语言中的静态成员构造函数：
+
+```js
+class ClassWithStaticInitializationBlock {
+  static staticProperty1 = "Property 1";
+  static staticProperty2;
+  static {
+    this.staticProperty2 = "Property 2"
+  }
+}
+
+console.log(ClassWithStaticInitializationBlock.staticProperty1);	// "Property 1"
+console.log(ClassWithStaticInitializationBlock.staticProperty2);	// "Property 2"
+```
+
+#### 构造函数
+
+`constructor`关键字用于在类内部定义一个构造函数，使用`new`关键字实例化对象时会调用它。构造函数在没有继承时可以不显式定义，解释器会自动生成一个空的构造函数。
+
+##### new 和实例化
+
+实例化一个类的对象和实例化一个构造函数操作类似：
+
+```js
+class Vegetable {
+    constructor(name) {
+        this.type = 'Vegetable';
+        this.name = name;
+    }
+}
+
+let vegeta = new Vegetable('Vegeta');
+console.log(vegeta);        // Vegetable { type: 'Vegetable', name: 'Vegeta' }
+```
+
+实例化类对象时，`new`操作符做了：
+
+1. 在内存中创建一个新对象
+2. 新对象内部的`[[Prototype]]`指针被赋值为构造函数（类）的`prototype`属性
+3. 类构造函数内部 this 指向新对象
+4. 执行构造函数内代码
+5. 如果构造函数返回非空对象，则返回该对象，否则返回创建的新对象
+
+这和构造函数实例化过程几乎没有区别，事实上`class`确实声明了一个新的构造函数。与普通构造函数的区别在于，使用类声明的构造函数时必须使用`new`关键字。
+
+##### 类也是函数
+
+类实际上也是一种函数，并且具有原型，原型的`constructor`指向类自身（不是指向类构造函数）：
+
+```js
+console.log(typeof Vegetable);                  // function
+console.log(Vegetable.prototype);               // {constructor: class Vegetable}
+console.log(Vegetable.prototype.constructor);   // class Vegetable
+```
+
+`instanceof`可以用来判断实例类型：
+
+```js
+console.log(new Vegetable('Kakarot') instanceof Vegetable);     // true
+```
+
+类的`constructor`属性（不是原型上那个）在进行类型判断时不会被当做构造函数：
+
+```js
+console.log(vegeta instanceof Vegetable.constructor);               // false
+```
+
+类可以立即实例化：
+
+```js
+let kakarot =new class Vegetable {
+    constructor(name) {
+        this.type = 'Vegetable';
+        this.name = name;
+    }
+}('Kakarot');
+```
+
+类可作参数传递：
+
+```js
+((c) => console.log(new c('Kakarot')))(Vegetable);	// Vegetable { type: 'Vegetable', name: 'Kakarot' }
+```
 
 ---
 
@@ -4085,7 +4573,6 @@ Web 组件在各浏览器中的具体实现并不相同，且目前在页面组�
 **HTML 模板**的核心思想是，提前在 HTML 写好特殊标记，让浏览器将其作为子 DOM 解析，但不进行渲染，在需要使用的时候将模板内容**转移**到 DOM 上。使用`<template>`标签创建一个模板：
 
 ```html
-
 <template id="foo">
     <p>I'm inside a template!</p>
 </template>
