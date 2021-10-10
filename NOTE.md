@@ -1407,8 +1407,7 @@ var 可能导致不必要的变量泄漏，而块级作用域的 let 和 const �
 
 JavaScript V8 是目前最流行的 JavaScript 解释器引擎，在众多浏览器和 NodeJS 中都使用 V8。V8 在编辑 JavaScript 为机器码时会利用**隐藏类**特性。
 
-V8 在运行时会将对象与一个隐藏类关联，跟踪他们的属性特征。这和其他高级编程语言中的自定义数据类型相似，只是 ES 中，自定义数据类型相当于一个构造器。用同一个构造器声明的多个对象将共用一个隐藏类，**
-但是为对象动态添加或删除属性或方法会导致生成一个新的隐藏类**，这将降低运行效率。因此，最好的方式是**将不再需要的属性绑定到空对象上**，并减少动态赋值，使用构造器或新的`class`语法：
+V8 在运行时会将对象与一个隐藏类关联，跟踪他们的属性特征。这和其他高级编程语言中的自定义数据类型相似，只是 ES 中，自定义数据类型相当于一个构造器。用同一个构造器声明的多个对象将共用一个隐藏类，但是为对象动态添加或删除属性或方法会导致**生成一个新的隐藏类**，这将降低运行效率。因此，最好的方式是**将不再需要的属性绑定到空对象上**，并减少动态赋值，使用构造器或新的`class`语法：
 
 ```js
 function Article() {
@@ -1442,8 +1441,7 @@ let outer = function () {
 };
 ```
 
-函数 outer 返回一个内部声明的函数，该函数内部引用了局部变量 name 。此变量本该在 outer 执行完毕后被销毁，但是由于返回的函数进行了引用。如果有一个变量接收了这个闭包，只有在该闭包被销毁时 name 才会一同销毁。因此，**
-尽可能不要再被返回的闭包中引用局部变量**。
+函数 outer 返回一个内部声明的函数，该函数内部引用了局部变量 name 。此变量本该在 outer 执行完毕后被销毁，但是由于返回的函数进行了引用。如果有一个变量接收了这个闭包，只有在该闭包被销毁时 name 才会一同销毁。因此，**尽可能不要再被返回的闭包中引用局部变量**。
 
 ##### 定时器泄漏
 
@@ -5511,6 +5509,618 @@ console.log(nameRef);           // react
 > 使用代理捕获器必须遵守捕获器不变式
 >
 > 代理仍然存在一些问题，使用时需要注意
+
+---
+
+## 10 函数
+
+函数是 ECMAScript 中最有趣的类型，函数实际上也是对象。由于函数是对象，函数名实际上就是一个引用了函数的变量标识符，并且两者可以解除引用绑定。
+
+目前函数总共有四种创建方式：声明、表达式、lambda 表达式、构造函数：
+
+声明：
+
+```js
+function sum (num1, num2) {
+	return num1 + num2;
+}
+```
+
+表达式：
+
+```js
+let sum = function(num1, num2) {
+	return num1 + num2;
+};
+```
+
+lambda 表达式：
+
+```js
+let sum = (num1, num2) => num1 + num2;
+```
+
+构造函数（不推荐使用）：
+
+```js
+let sum = new Function("num1", "num2", "return num1 + num2");
+```
+
+这几种创建方式实际上存在着一些区别，但它们都可以实例化一个函数对象。
+
+### 箭头函数
+
+ES 6新增了一种**箭头函数表达式**（更确切的名称应该是 **Lambda 表达式**）。箭头函数创建的函数的行为和正式的函数表达式创建的函数对象的行为是相同的，但是箭头函数更加简洁。
+
+#### 语法
+
+如果只有一个参数，可以不用括号。只有没有参数，或者多个参数的情况下，才需要使用括号：
+
+```js
+// 以下两种写法都有效
+let double = (x) => { return 2 * x; };
+let triple = x => { return 3 * x; };
+// 没有参数需要括号
+let getRandom = () => { return Math.random(); };
+// 多个参数需要括号
+let sum = (a, b) => { return a + b; };
+// 无效的写法：
+// let multiply = a, b => { return a * b; };
+```
+
+函数体在只有一条语句时也可以不使用大括号包裹，并且函数最终会返回该表达式的结果：
+
+```js
+let triple = (x) => 3 * x;
+```
+
+#### 与一般函数的区别
+
+箭头函数实际上是一句 **Lambda 表达式**，可以将箭头函数视为保存了一句表达式的对象，Lambda 表达式执行的结果是一个特殊的函数。**箭头函数和普通函数的区别有**：
+
++ 箭头函数没有自己的 this ，其函数体（或者说表达式中语句）中的 this 就是定义时外部作用域上下文中的 this ，指向与外部作用域上下文中的 this 相同
++ 没有标准函数内置对象`arguments`，要想获取所有参数，需要在参数列表中使用一个可迭代对象接收剩余参数
++ 不能用作构造函数，因此没有`prototype`，也不能在函数体内使用`super`和`new.target`
+
+### 函数名
+
+函数名即函数指针，一个函数可以被多个变量所引用，也可以随时和变量解除绑定。每个函数对象都有一个`name`属性，默认情况下这个属性就是函数的标识符，使用构造函数创建的函数的`name`为匿名：
+
+```js
+function foo() {}
+let bar = function() {};
+let baz = () => {};
+console.log(foo.name); // foo
+console.log(bar.name); // bar
+console.log(baz.name); // baz
+console.log((() => {}).name); //（空字符串）
+console.log((new Function()).name); // anonymous
+```
+
+如果一个函数是 getter、setter 或是使用了`bind()`实例化的一个新函数，其`name`会有一个前缀：
+
+```js
+function foo() {}
+console.log(foo.bind(null).name); // bound foo
+let dog = {
+    years: 1,
+    get age() {
+    	return this.years;
+    },
+    set age(newAge) {
+    	this.years = newAge;
+    }
+}
+let propertyDescriptor = Object.getOwnPropertyDescriptor(dog, 'age');
+console.log(propertyDescriptor.get.name); // get age
+console.log(propertyDescriptor.set.name); // set age
+```
+
+### 参数
+
+动态类型的 ECMAScript 并不关注实际参数的类型是否和形式参数匹配，甚至不关心实际参数的属性是否和预期的形式参数一致（虽然一些原生接口在参数类型和个数出错时会抛出错误），这也是为什么 JavaScript 程序中特别容易出现空上调用和调用空的原因。
+
+实际上，ES 中函数的参数在内部表现为一个可迭代聚合对象，或者说**数组**，在函数体中可以通过函数标准内置对象`arguments`访问到它。这个对象可迭代且类似数组，并能够被`Array.from`转化为一个数组。这个对象还是只读的，尝试重写会抛出错误：
+
+```js
+(function () {
+    console.log(arguments);                         // [Arguments] { '0': 1, '1': 2, '2': 3 }
+    console.log(typeof arguments);                  // object
+    console.log(arguments instanceof Array);        // false
+    console.log(Array.from(arguments));             // [ 1, 2, 3 ]
+})(1, 2, 3);
+```
+
+对于命名参数，如果函数调用时没有传入实参，其值就为`undefined`。
+
+对于箭头函数，因为其内部没有`arguments`，需要手动设置一个命名参数并让其接收所有参数：
+
+```js
+((...rest) => {
+    console.log(rest);                      // [ 1, 2, 3, 4 ]
+    console.log(typeof rest);               // object
+    console.log(rest instanceof Array);     // true
+})(1, 2, 3, 4);
+```
+
+或使用闭包（但是这么做没有意义）：
+
+```js
+function foo() {
+    let bar = () => {
+    	console.log(arguments[0]); // 5
+    };
+    bar();
+}
+foo(5);
+```
+
+ES 中所有参数的传递方式**都是值传递**，不存在引用传递。对于基元类型值，参数传递其值，对于引用类型值，参数传递其指针。
+
+### 重载
+
+ES 中的函数并不支持重载，只能手动实现类似的效果。
+
+### 参数默认值
+
+ES 6标准后可以使用参数默认值，一般来说第一个有默认值的参数右边的参数都应该指定默认值，ES 中即使不这么做也不会抛出错误，但是这样的默认值没有意义。
+
+```js
+((a = 0, b = 0) => {
+    console.log(a + b);
+})(1);
+```
+
+参数如果需要使用默认值，就会有一个初始化过程，这个过程和 let 声明的变量初始化很像，并会有“暂时性死区”。靠右的参数可以使用左边参数的值作为其默认值：
+
+```js
+((a, b = a) => {
+    console.log(a + b);
+})(1);
+```
+
+### 展开操作符
+
+因为 ES 中函数的参数实际上是一个可迭代聚合对象，可以将一个可迭代对象作参数并使用`...`展开来进行参数传递：
+
+```js
+((a, b, c) => {
+    console.log(a + b + c);     // 6
+})(...[1, 2, 3]);
+```
+
+同样，箭头函数利用展开操作符实现类似`arguments`的功能。
+
+### 声明和表达式
+
+函数声明和 var 声明的变量一样会被**提升**：
+
+```js
+// 没问题
+console.log(sum(10, 10));
+function sum(num1, num2) {
+	return num1 + num2;
+}
+```
+
+而使用函数表达式为某个变量赋值实际上是一种初始化过程，如果变量是用 var 声明的，那么只有执行到函数表达式的位置时才会生成一个函数对象。let 声明的变量直接会出现“暂时性死区”：
+
+```js
+// 出错
+console.log(sum(10, 10));
+var sum = function(num1, num2) {
+	return num1 + num2;
+};
+```
+
+利用表达式初始化一个变量使其指向一个函数有时比直接声明函数会更安全，因为函数声明语句的提升可能导致意外的结果。比如下面这个例子：
+
+```js
+if (condition) {
+    function sayHi() {
+    	console.log('Hi!');
+    }
+} else {
+    function sayHi() {
+    	console.log('Yo!');
+    }
+}
+```
+
+这么做是很不安全的，因为函数声明语句将会提升，在不同的浏览器中这段代码的行为将会不同。在大多数浏览器中，根据提升规则，后声明的同名函数将会覆盖之前的同名声明，因此实际上 if 判断会被直接跳过，最终声明的是下方的函数。
+
+而使用表达式就可以避免这个问题，这种方法和箭头函数一样是一种**匿名函数**模式：
+
+```js
+let sayHi;
+if (condition) {
+    sayHi = function() {
+    	console.log("Hi!");
+    };
+} else {
+    sayHi = function() {
+    	console.log("Yo!");
+    };
+}
+```
+
+### 函数内部
+
+函数内部存在两个特殊的对象`this`和`arguments`，ES 6中又新增了`new.target`。
+
+#### arguments
+
+`arguments`是一个可迭代聚合对象，或者说类数组对象，包含调用函数时传入的所有参数。`arguments`有一个属性`callee`指向`arguments`所在的函数：
+
+```js
+(function () {
+    console.log(arguments.callee);      // Function (anonymous)
+})();
+
+function fun() {
+    console.log(arguments.callee);      // Function: fun
+}
+
+fun();
+```
+
+在编写递归函数时，这个属性会非常有用，下方是一个阶乘函数：
+
+```js
+function factorial(num) {
+    if (num <= 1) {
+        return 1;
+    } else {
+    	return num * arguments.callee(num - 1);
+    }
+}	
+```
+
+函数内部递归使用了`arguments.callee`，因此无论递归函数名称怎样改变，内部逻辑都不会被打破，这种紧密逻辑使得代码更加容易维护。
+
+`arguments`的另一个属性为`length`，记录了参数个数，正是因为有这个属性，`arguments`才能被`Array.from()`转换。
+
+#### this
+
+this 的指向问题可以说是回调函数模式中众多空错误的来源，弄清楚 this 的指向将非常重要。this 在标准函数和箭头函数中的行为不同。
+
+##### 标准函数
+
+标准函数中的 this 引用的是**调用函数的上下文对象**，即调用者。函数作函数调用，this 就指向`Global`，作方法调用，this 就指向调用方法的对象：
+
+```js
+window.color = 'red';
+let o = {
+	color: 'blue'
+};
+function sayColor() {
+	console.log(this.color);
+}
+sayColor(); // 'red'
+o.sayColor = sayColor;
+o.sayColor(); // 'blue'
+```
+
+##### 箭头函数
+
+箭头函数中的 this 引用的是**定义时的上下文对象**，不会随着调用者而改变：
+
+```js
+window.color = 'red';
+let o = {
+	color: 'blue'
+};
+let sayColor = () => console.log(this.color);
+sayColor(); // 'red'
+o.sayColor = sayColor;
+o.sayColor(); // 'red'
+```
+
+在使用对象字面量定义方法时也要注意该问题，字面量是**不产生**自己的作用域上下文的：
+
+```js
+let obj = {
+    name: 'obj',
+    say() {
+        console.log(this.name);
+    },
+    sayThat: () => {
+        console.log(this.name);
+    }
+}
+obj.say();          // 'obj'
+obj.sayThat();      // undefined
+```
+
+箭头函数的特性使得其比较适合作回调，因为可以让 this 指向定义时的上下文：
+
+```js
+function King() {
+    this.royaltyName = 'Henry';
+    // this 引用King 的实例
+    setTimeout(() => console.log(this.royaltyName), 1000);
+}
+
+function Queen() {
+    this.royaltyName = 'Elizabeth';
+    // this 引用window 对象
+    setTimeout(function() { console.log(this.royaltyName); }, 1000);
+}
+new King(); // Henry
+new Queen(); // undefined	
+```
+
+#### caller
+
+在过去函数还有一个属性`caller`，指向调用函数的函数：
+
+```js
+function f1() {
+    f2();
+}
+
+function f2() {
+    console.log(f2.caller);         // Function: f1
+}
+
+f1();
+```
+
+目前该属性已经被弃用。这么做是考虑到浏览器安全，因为第三方代码可能利用该属性来嗅探同一上下文中的其他代码，最好不要使用。
+
+#### new.target
+
+ES 6新增了函数的`new.target`属性，该属性可以用来检测一个函数是否被当作构造函数使用，如果被作为构造函数使用则引用被调用的构造函数：
+
+```js
+function Animal() {
+    console.log(new.target);
+}
+
+let dog = new Animal();     // [Function: Animal]
+Animal();                   // undefined
+```
+
+### 函数的属性
+
+函数有两个属性：`length`和`protoype`。原型对象前面已经提到，而`length`则记录了函数命名参数的个数：
+
+```js
+function sayName(name) {
+	console.log(name);
+}
+function sum(num1, num2) {
+	return num1 + num2;
+}
+function sayHi() {
+	console.log("hi");
+}
+console.log(sayName.length); 	 // 1
+console.log(sum.length); 		// 2
+console.log(sayHi.length); 		// 0
+```
+
+### 函数的方法
+
+函数有三个方法：`apply()`、`call()`和`bind()`，三个方法都用来改变函数内部 this 指向。
+
+#### apply()
+
+`apply()`接收两个参数：第一个参数为 this 将指向的对象，第二个参数为函数将要接收的参数数组或`arguments`对象；随后执行改变 this 指向的函数并返回：
+
+```js
+function sum(num1, num2) {
+	return num1 + num2;
+}
+
+function callSum1(num1, num2) {
+	return sum.apply(this, arguments); // 传入arguments 对象
+}
+
+function callSum2(num1, num2) {
+	return sum.apply(this, [num1, num2]); // 传入数组
+}
+console.log(callSum1(10, 10)); // 20
+console.log(callSum2(10, 10)); // 20
+```
+
+#### call()
+
+`call()`和`apply()`的区别只在参数传入的方式上，`call()`将参数逐个传入：
+
+```js
+function sum(num1, num2) {
+	return num1 + num2;
+}
+function callSum(num1, num2) {
+	return sum.call(this, num1, num2);
+}
+console.log(callSum(10, 10)); // 20
+```
+
+下面是一个重新绑定 this 的例子：
+
+```js
+window.color = 'red';
+let o = {
+	color: 'blue'
+};
+function sayColor() {
+	console.log(this.color);
+}
+sayColor(); 			// red
+sayColor.call(this); 	// red
+sayColor.call(window); 	// red
+sayColor.call(o); 		// blue
+```
+
+#### bind()
+
+`bind()`接收一个作为 this 指向的对象作为参数，随后返回一个改变了内部 this 指向的函数，但不会执行该函数：
+
+```js
+window.color = 'red';
+var o = {
+	color: 'blue'
+};
+function sayColor() {
+	console.log(this.color);
+}
+let objectSayColor = sayColor.bind(o);
+objectSayColor(); // blue
+```
+
+### 安全的递归调用
+
+前面已经提到过`arguments.callee`属性，利用该属性可以避免因为函数指针修改导致的空问题，利用`callee`进行递归调用是最安全的。但是由于`callee`会带来额外内存开销，这么做会降低递归运算效率。如果需要进行深度递归调用，就不要使用安全递归。
+
+### 尾调用优化
+
+**尾调用**指的是一个外部函数的返回值是一个内部函数的返回值时的情况：
+
+```js
+function outerFunction() {
+    function innerFunction() {}
+	return innerFunction(); // 尾调用
+}
+```
+
+根据正常的函数中断流程走，执行外部函数时函数调用堆栈将发生以下操作：
+
+1. 外部函数入栈，栈深度为1
+2. 外部函数执行到返回语句，发现需要返回一个表达式的值，该表达式调用一个内部函数
+3. 外部函数中断，内部函数入栈，栈深度为2
+4. 内部函数执行完毕并返回结果，出栈，栈深度为1
+5. 外部函数结束中断，并返回表达式结果，出栈，栈深度为0
+
+ES 6规范规定解释器需要完成**尾调用优化**。在实现了尾调用优化的情况下，函数调用堆栈将发生如下操作：
+
+1. 外部函数入栈，栈深度为1
+2. 外部函数执行到返回语句，发现需要返回一个表达式的值，该表达式调用一个内部函数
+3. 解释器发现该返回表达式内只包含一个内部函数调用语句，并且内部函数返回值也是外部函数的返回值
+4. 外部函数直接出栈，栈深度为0
+5. 内部函数入栈，栈深度为1
+6. 内部函数执行完毕并返回结果，出栈，栈深度为0
+
+在尾调用优化的情况下，调用堆栈的最大深度总共只有1，中断次数直接变为0。
+
+#### 尾调用优化条件
+
+想要让解释器进行尾调用优化，代码需要满足：
+
++ 代码运行在**严格模式**（使用严格模式是为了避免调用`arguments`和`caller`，这两个内置对象会引用外部函数的堆栈，也可以不使用严格模式，但是需要避免这些问题）
++ 外部函数返回值是尾调用函数的返回值
++ 尾调用函数返回值被外部函数直接返回而不需要其他操作
++ 尾调用函数不是外部函数体内变量的闭包
+
+以下函数不符合尾调用优化条件：
+
+```js
+"use strict";
+
+// 无优化：尾调用没有返回
+function outerFunction() {
+    innerFunction();
+}
+
+// 无优化：尾调用没有直接返回
+function outerFunction() {
+    let innerFunctionResult = innerFunction();
+    return innerFunctionResult;
+}
+
+// 无优化：尾调用返回后必须转型为字符串
+function outerFunction() {
+    return innerFunction().toString();
+}
+
+// 无优化：尾调用是一个闭包
+function outerFunction() {
+    let foo = 'bar';
+
+    function innerFunction() {
+        return foo;
+    }
+
+    return innerFunction();
+}
+```
+
+以下函数满足尾调用优化条件：
+
+```js
+"use strict";
+
+// 有优化：栈帧销毁前执行参数计算
+function outerFunction(a, b) {
+    return innerFunction(a + b);
+}
+
+// 有优化：初始返回值不涉及栈帧
+function outerFunction(a, b) {
+    if (a < b) {
+        return a;
+    }
+    return innerFunction(a + b);
+}
+
+// 有优化：两个内部函数都在尾部
+function outerFunction(condition) {
+    return condition ? innerFunctionA() : innerFunctionB();
+}
+```
+
+#### 利用尾调用优化递归算法
+
+斐波那契数列计算是一个典型的时间复杂度为 O(2^n^) 的算法，该算法可以用安全递归实现：
+
+```js
+function safeRecursionFib(n) {
+    if (n < 2) {
+        return n;
+    }
+    return arguments.callee(n - 1) + arguments.callee(n - 2);
+}
+```
+
+可以发现这个算法实现中并不符合尾调用优化，只是计算1000轮都会给浏览器带来很大负担。因此可以利用尾调用优化条件来优化该算法：
+
+```js
+"use strict";
+
+// 基础框架
+function optimizedRecursionFib(n) {
+    return fibImpl(0, 1, n);
+}
+
+// 执行递归
+function fibImpl(a, b, n) {
+    if (n === 0) {
+        return a;
+    }
+    return fibImpl(b, a + b, n - 1);
+}
+```
+
+这样做唯一一个问题是递归不一定是安全的，因为严格模式下无法使用`arguments.callee`，但是却大大优化了运行时消耗的资源量。现在进行1000轮运算只需要1秒不到，而进行8000轮运算的速度比没有进行尾优化时的30轮都快：
+
+```js
+console.time('no optimization');
+console.log(safeRecursionFib(30));           // 832040
+console.timeEnd('no optimization');     	// no optimization: 56.503ms，安全递归，如果使用非安全会更快，大概为16ms
+
+console.time('optimization');
+console.log(optimizedRecursionFib(30));      // 832040
+console.timeEnd('optimization');        	// optimization: 0.215ms
+
+console.time('optimization crazy');
+console.log(optimizedRecursionFib(1000));    // 4.346655768693743e+208
+console.timeEnd('optimization crazy');  	// optimization crazy: 0.183ms
+
+console.time('optimization insane');
+console.log(optimizedRecursionFib(8000));    // Infinity
+console.timeEnd('optimization insane');  	// optimization insane: 2.339ms
+```
 
 ---
 
