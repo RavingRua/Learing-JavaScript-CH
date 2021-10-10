@@ -1,7 +1,5 @@
 // 利用捕获器进行函数参数类型和内容验证
-let add = (a, b) => {
-    return a + b;
-}
+let add = (a, b) => a + b;
 
 let proxy = new Proxy(add, {
     apply(target, thisArg, argArray) {

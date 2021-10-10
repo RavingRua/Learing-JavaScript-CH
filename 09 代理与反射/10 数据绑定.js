@@ -1,7 +1,5 @@
 // 利用捕获器可以实现数据绑定，把运行过程中原本不关联的对象进行关联
-let obj = {
-    name: 'obj'
-}
+let obj = {name: 'obj'};
 
 let nameRef = obj.name;
 obj.name = 'vue';

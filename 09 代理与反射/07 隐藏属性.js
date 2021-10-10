@@ -1,7 +1,5 @@
 // 通过代理访问可以隐藏一些属性
-let obj = {
-    name: 'obj',
-}
+let obj = {name: 'obj'};
 
 let proxy = new Proxy(obj, {
     get(target, prop) {

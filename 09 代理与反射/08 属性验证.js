@@ -1,7 +1,5 @@
 // 可以使用捕获器在为属性赋值前进行类型和内容检查
-let obj = {
-    num: String
-}
+let obj = {num: String};
 
 let proxy = new Proxy(obj, {
     set(target, p, value, receiver) {

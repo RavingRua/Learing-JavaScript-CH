@@ -1,4 +1,3 @@
-// 捕获处理程序handler中的捕获器trap必须遵守一些规则，称为捕获器不变式trap invariant
 let obj = {};
 Object.defineProperty(obj, 'name', {
     writable: false,
