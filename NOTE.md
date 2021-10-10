@@ -4467,7 +4467,7 @@ const Animal = class {};
 
 但是和函数表达式不同，类声明语句**不会**进行变量提升，只能在声明后被引用。并且函数受函数作用域限制，**类受块作用域限制**，也会引起重定义错误。
 
-下面介绍类的组成部分，会包含一些较新的特性，截至这部分内容撰写时（2021.10.10）一些老版本浏览器（甚至包括最新版本）可能没有实现。关于类的后续动态可以关注该页面：[MDN 类](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Classes)。
+下面介绍类的组成部分，会包含一些较新的特性，截至这部分内容撰写时（2021.10.10）一些老版本浏览器（甚至包括最新版本）可能没有实现。关于类的后续动态可以关注该页面：[MDN 类](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Classes) 。
 
 #### 静态成员初始化块
 
@@ -4554,6 +4554,234 @@ let kakarot =new class Vegetable {
 ```js
 ((c) => console.log(new c('Kakarot')))(Vegetable);	// Vegetable { type: 'Vegetable', name: 'Kakarot' }
 ```
+
+#### 实例成员
+
+在类内部声明或构造函数中挂载到 this 上的成员即是实例成员，函数成员将在所有对象中共享，而不是每次实例化都创建一个函数对象：
+
+```js
+class Animal {
+    constructor() {
+        // 实例成员
+        this.cry = function () {
+        }
+    }
+
+    // 实例成员
+    name;
+}
+```
+
+#### 静态成员
+
+使用`static`关键字声明或在类定义外部挂载到原型上的成员即为静态成员：
+
+```js
+// 静态成员
+static type = 'Animal';
+```
+
+#### 可访问性
+
+默认情况下定义的成员都是公有的，想让一个成员成为私有成员，在标识符前加上一个井号`#`，调用私有成员时也需要写上`#`：
+
+```js
+// 私有成员
+#_instanceCount;
+```
+
+#### 访问器
+
+类中也可以定义属性的 getter 和 setter：
+
+```js
+// 访问器
+get instanceCount() {
+    return this.#_instanceCount;
+}
+
+set instanceCount(v) {
+    this.#_instanceCount = v;
+}
+```
+
+#### 迭代方法
+
+可以在类中定义生成器方法和默认的迭代方法，让类变成可迭代类：
+
+```js
+// 可迭代类
+class Iterable {
+    item = [1, 2, 3, 4, 5, 6];
+
+    // 生成器方法
+    * createNumberIterator() {
+        yield* this.item;
+    }
+
+    // 实现默认迭代方法
+    [Symbol.iterator]() {
+        return this.item.values();
+    }
+}
+
+let iter = new Iterable();
+
+for (let v of iter.createNumberIterator()) {
+    console.log(v);             // 1,2,3,4,5,6
+}
+
+for (let v of iter) {
+    console.log(v);             // 1,2,3,4,5,6
+}
+```
+
+### 继承
+
+在 ES 6中可以很方便地使用`extends`实现单继承和多继承：
+
+```js
+class Animal {
+    type = 'Animal'
+}
+
+class Human extends Animal {
+    type = 'Human';
+}
+
+console.log(new Human().type);      // Human
+```
+
+一个类可以继承任何拥有`[[Constructor]]`和`[[Prototype]]`的对象，因此可以直接继承 ES 6之前的构造函数，保证向下兼容，之前的`XSet`就是一个例子。
+
+#### 构造函数、HomeObject 和 super 指针
+
+派生类可以通过`super`指针引用它们的原型对象，即基类，并访问原型上的成员。该关键字只能在派生类的构造函数和方法中使用。
+
+如果一个派生类显式定义了构造函数，则必须在函数体内调用基类构造函数（不管基类构造函数是否有参或有显式定义的构造函数），并需要位于函数体顶端（即 this 不能在 `super()`前使用）：
+
+```js
+class Animal {
+    type = 'Animal'
+}
+
+class Human extends Animal {
+    constructor(name) {
+        // 必须调用基类构造函数，并位于作用域顶端
+        super();
+        super.type;
+
+        this.name = name;
+    }
+
+    type = 'Human';
+}
+
+console.log(new Human('Steven').type);      // Human
+```
+
+类的构造函数和静态方法有一个内部特性`[[HomeObject]]`，该属性指向定义该方法的对象。因此`super`始终指向`[[HomeObject]]`的原型，而`super()`则会调用`[[HomeObject]]`的`[[Constructor]]`。
+
+`super` 可以做以下事情：
+
++ 访问类的原型，即基类，但是**不能单独使用**该关键字，必须引用其成员
++ 调用基类构造函数，并将基类构造函数体中的 this 指向调用它的派生类
++ 向基类构造函数传递参数
+
+#### 抽象类
+
+ES 中还没有专门的语法实现抽象类，但是可以通过`new.target`模拟。`new.target`保存通过`new`调用的类或函数，可以用于检测一个类是否用于实例化自身的对象：
+
+```js
+class Animal {
+    constructor() {
+        if (new.target === Animal) throw new Error('Abstract class cannot be instantiated.');
+    }
+}
+
+try {
+    new Animal();
+} catch (e) {
+    console.error(e.message);           // Abstract class cannot be instantiated.
+}
+```
+
+`Animal`是一个不该被实例化的抽象类，通过`new.target`进行检测，如果自身被用于实例化则抛出错误，而派生类被实例化则不会：
+
+```js
+class Human extends Animal {
+}
+
+new Human();
+```
+
+也可以进行抽象方法检测：
+
+```js
+if (!this.eat) throw new Error('Inheriting class must define abstract method eat().');
+```
+
+#### 继承原生类型
+
+原生类型的构造函数也可以出现在继承列表中，继承内置类型的新类型可以实现一些新方法：
+
+```js
+class SuperArray extends Array {
+shuffle() {
+    // 洗牌算法
+    for (let i = this.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        	[this[i], this[j]] = [this[j], this[i]];
+        }
+    }
+}
+let a = new SuperArray(1, 2, 3, 4, 5);
+console.log(a instanceof Array); // true
+console.log(a instanceof SuperArray); // true
+console.log(a); // [1, 2, 3, 4, 5]
+a.shuffle();
+console.log(a); // [3, 1, 4, 5, 2]
+```
+
+一些原生类型的方法可能会返回一个新实例，由于派生类构造函数调用了基类构造函数，并将基类构造函数中的 this 指向了派生类对象，这些新的实例也将为派生类类型：
+
+```js
+class SuperArray extends Array {}
+let a1 = new SuperArray(1, 2, 3, 4, 5);
+let a2 = a1.filter(x => !!(x % 2))
+console.log(a1); // [1, 2, 3, 4, 5]
+console.log(a2); // [1, 3, 5]
+console.log(a1 instanceof SuperArray); // true
+console.log(a2 instanceof SuperArray); // true
+```
+
+这一默认行为是可以覆盖的，如果只需要返回一个内置类型的对象，可以覆盖 getter `[Symbol.species]`，决定**返回对象的类型**：
+
+```js
+class SuperArray extends Array {
+    static get [Symbol.species]() {
+    	return Array;
+    }
+}
+let a1 = new SuperArray(1, 2, 3, 4, 5);
+let a2 = a1.filter(x => !!(x % 2))
+console.log(a1); // [1, 2, 3, 4, 5]
+console.log(a2); // [1, 3, 5]
+console.log(a1 instanceof SuperArray); // true
+console.log(a2 instanceof SuperArray); // false
+```
+
+由于 ECMAScript 本身是动态类型的，实际编程过程中使用**组合模式**（类似混入（mixin），将一些属性和方法放到单独的类中，在使用时将它们的对象组合起来形成一个新对象使用）可能更加有效。组合的对象不是任何一个类的派生类，更加灵活，也反映了“**组合胜过继承**（composition over inheritance）”的设计原则。ES 6虽然没有定义专门的混入关键字，但是可以使用`Object.assign()`进行对象组合。
+
+>对象是一组属性的无序集合，属性可以是数据属性和访问器属性
+>
+>在过去，复用对象的模式有工厂模式、构造函数模式和原型模式
+>
+>在过去，实现对象继承可以使用原型链模式、盗用构造函数、组合继承等方式
+>
+>ES 6 标准提出了类的概念，本质上还是原型，但是极大简化了面向对象编程
+>
+>ES 的面向对象始终是不完整的，可能会在将来标准中逐渐完善
 
 ---
 
