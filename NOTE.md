@@ -1441,7 +1441,7 @@ let outer = function () {
 };
 ```
 
-函数 outer 返回一个内部声明的函数，该函数内部引用了局部变量 name 。此变量本该在 outer 执行完毕后被销毁，但是由于返回的函数进行了引用。如果有一个变量接收了这个闭包，只有在该闭包被销毁时 name 才会一同销毁。因此，**尽可能不要再被返回的闭包中引用局部变量**。
+函数 outer 返回一个内部声明的函数，该函数内部引用了局部变量 name 。此变量本该在 outer 执行完毕后被销毁，但是由于返回的函数进行了引用。如果有一个变量接收了这个闭包，只有在该闭包被销毁时 name 才会一同销毁。事实上，泄漏的不只有这个变量引用的值，还有整个函数上下文对象。因此，**尽可能不要再被返回的闭包中引用局部变量**。
 
 ##### 定时器泄漏
 
@@ -5578,7 +5578,7 @@ let triple = (x) => 3 * x;
 
 箭头函数实际上是一句 **Lambda 表达式**，可以将箭头函数视为保存了一句表达式的对象，Lambda 表达式执行的结果是一个特殊的函数。**箭头函数和普通函数的区别有**：
 
-+ 箭头函数没有自己的 this ，其函数体（或者说表达式中语句）中的 this 就是定义时外部作用域上下文中的 this ，指向与外部作用域上下文中的 this 相同
++ 箭头函数没有自己的 this ，表达式中语句的 this 就是定义时外部作用域上下文中的 this ，指向与外部作用域上下文中的 this 相同
 + 没有标准函数内置对象`arguments`，要想获取所有参数，需要在参数列表中使用一个可迭代对象接收剩余参数
 + 不能用作构造函数，因此没有`prototype`，也不能在函数体内使用`super`和`new.target`
 
@@ -5976,11 +5976,11 @@ objectSayColor(); // blue
 
 ### 尾调用优化
 
-**尾调用**指的是一个外部函数的返回值是一个内部函数的返回值时的情况：
+**尾调用**指的是一个函数的返回值是另一个在内部被调用的函数的返回值时的情况，即外部函数在堆栈中没有必要存在时的情况：
 
 ```js
+function innerFunction() {}
 function outerFunction() {
-    function innerFunction() {}
 	return innerFunction(); // 尾调用
 }
 ```
@@ -6008,7 +6008,7 @@ ES 6规范规定解释器需要完成**尾调用优化**。在实现了尾调用
 
 想要让解释器进行尾调用优化，代码需要满足：
 
-+ 代码运行在**严格模式**（使用严格模式是为了避免调用`arguments`和`caller`，这两个内置对象会引用外部函数的堆栈，也可以不使用严格模式，但是需要避免这些问题）
++ 代码运行在**严格模式**（使用严格模式是为了避免调用`arguments`和`caller`，这两个内置对象的存在将会引用外部函数的堆栈）
 + 外部函数返回值是尾调用函数的返回值
 + 尾调用函数返回值被外部函数直接返回而不需要其他操作
 + 尾调用函数不是外部函数体内变量的闭包
@@ -6121,6 +6121,163 @@ console.time('optimization insane');
 console.log(optimizedRecursionFib(8000));    // Infinity
 console.timeEnd('optimization insane');  	// optimization insane: 2.339ms
 ```
+
+### 闭包
+
+**闭包（closure）**是引用了另一个**函数作用域**中变量的**函数**。如下：
+
+```js
+function createComparisonFunction(propertyName) {
+    return function(object1, object2) {
+        let value1 = object1[propertyName];
+        let value2 = object2[propertyName];
+        if (value1 < value2) {
+        	return -1;
+        } else if (value1 > value2) {
+        	return 1;
+        } else {
+        	return 0;
+        }
+    };
+}
+```
+
+#### 内存泄漏
+
+内部返回的匿名函数就是一个闭包，因为其引用了外部函数作用域中的形式参数。这个参数所引用的值本该在函数作用域结束后被销毁，但是由于闭包内部对其有一个引用，这个值就可能在之后再次被使用，也就不能销毁。这可能会引起**内存泄漏**。
+
+并且，泄漏的内存不只是引用的值的内存，而是整个**函数上下文对象**的内存。这是由于函数作用域内部的变量和参数列表中的变量会被当做属性挂载到函数的作用域上下文对象中，如果某个变量在函数作用域中没有失去所有引用，那么它的生命周期会和函数作用域一同结束。反之，如果闭包引用了函数上下文对象上的属性，上下文对象也不会被销毁。虽然 V8 引擎会尽力回收闭包中不必要的内存，还是应该注意闭包的使用。
+
+#### 闭包的 this
+
+普通函数的`this`将指向调用该函数的上下文。如果在全局上下文中调用，会绑定到`Global`对象上，严格模式下为`undefined`，而对象的普通函数方法则是绑定到对象上。
+
+假如一个闭包被返回，`this`的指向就成了比较令人头疼的问题：
+
+```js
+window.identity = 'The Window';
+let object = {
+    identity: 'My Object',
+        getIdentityFunc() {
+            return function() {
+                return this.identity;
+            };
+    }
+};
+console.log(object.getIdentityFunc()()); // 'The Window'
+```
+
+这里的`this`之所以会指向`window`，是因为`object.getIdentityFunc()()`调用了对象方法的返回值，即一个闭包。而调用该闭包的则是全局上下文，即`window`。
+
+`this`指向情况还可能更加复杂：
+
+```js
+object.getIdentity(); // 'My Object'
+(object.getIdentity)(); // 'My Object'
+(object.getIdentity = object.getIdentity)(); // 'The Window'
+```
+
+第一行是正常的函数调用，因此`this`指向对象；第二行的表达式返回的是对象方法的引用，因此调用者还是这个对象；而第三行是一个赋值语句，赋值表达式最终的返回结果是赋值的变量，在这里是一个函数而不是对象，因此调用者变成了`window`。
+
+### 立即调用函数表达式
+
+**立即调用的函数表达式**（**IIFE**，Immediately Invoked Function Expression）是中将函数声明和表达式返回值再调用的结合。利用括号包裹返回值的特性，在括号内声明一个函数，随后调用这个表达式返回的匿名函数的引用：
+
+```js
+(function() {
+	// 函数作用域
+})();
+```
+
+这么做可以模拟一个块级作用域，因为函数是有自己的作用域上下文的，在其中用`var`声明的变量也不会被挂载到外部作用域中。在 ES 6 之前这种模式有防止变量外泄的效果，经常被用在防止`for`语句中声明的变量外泄的场景上，ES 6 之后使用`let`即可：
+
+```js
+for (var i = 0; i < 3; ++i) {}
+console.log(i);		// 3
+for (let j = 0; j < 3; j++) {}
+console.log(j);		// j is not defined
+```
+
+### 私有变量和模块
+
+在早期 ES 中还没有类的私有成员这一概念，但是有**私有变量**的概念。私有变量是指外部作用域无法访问的变量，可以将其认为是函数中定义的变量。
+
+#### 私有成员
+
+私有变量模式在过去可以用来模拟类的私有成员：
+
+```js
+(function() {
+    let name = '';
+    Person = function(value) {
+        name = value;
+    };
+    Person.prototype.getName = function() {
+        return name;
+    };
+    Person.prototype.setName = function(value) {
+        name = value;
+    };
+})();
+```
+
+此处的`Person`没有用`var`声明，因此是一个全局变量，而且中的`name`则是局部变量。要访问`name`，就需要通过对象方法来访问，这种模式会导致作用域变长，因此并不是最佳的私有成员实现方式。在新的 ES 中，直接用`#`在类中声明私有成员即可。
+
+#### 模块
+
+在 ES 6 之前，想要实现模块可以通过立即调用函数。这里例举三个模块实现模式：
+
+##### 全局变量模式
+
+直接在函数内部声明一个全局对象，并在函数内部往对象上挂载属性和方法，并进行其他处理，实现模块：
+
+```js
+(function () {
+    exports;
+    let _value = 10;
+    exports.value = _value;
+})();
+
+console.log(exports.value);     // 10
+```
+
+##### 参数挂载模式
+
+向立即调用函数传入引用类型参数，并在参数引用的对象上挂载成员：
+
+```js
+let module = {};
+(function (exports) {
+    exports.value = 10;
+})(module);
+
+console.log(module.value);      // 10
+```
+
+##### 工厂函数模式
+
+让一个变量作为模块接收立即调用表达式返回的结果，实现模块：
+
+```js
+let module = (function (exports) {
+    exports.value = 10;
+    return exports;
+})({});
+
+console.log(module.value);      // 10
+```
+
+这些模式只能模拟模块，或多或少存在一些问题。在 ES 6 之后，应该使用标准模块代替这些模式。
+
+>函数也是对象，因此可以被任意引用和调用，但是要注意其中 this 将指向其调用者
+>
+>箭头函数可以更加简洁的定义函数，与普通函数不同，其内部 this 指向定义时的上下文对象，此外还有一些重要区别
+>
+>函数声明语句会被提升，而函数表达式不会
+>
+>符合尾调用优化条件的函数可以节省调用堆栈空间，从而增加算法效率
+>
+>闭包是引用了另一个函数作用域中变量的函数，可能导致内存泄漏
 
 ---
 
