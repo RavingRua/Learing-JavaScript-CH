@@ -2685,7 +2685,7 @@ console.log(view.getUint8(0));      				// 255
 
 #### 定型数组
 
-通过 ES 的 DataView API 控制内存的效率不如**定型数组**，定型数组通过 ES API 向原生发送指令来控制内存。这些定型数组只能控制对应的 ElementType ，其名称也和元素类型相关。定型数组的类型名称为 ElementType + Array。定型数组操作方式类似于数组，以`Int32Array`为例：
+通过 ES 的 DataView API 控制内存的效率不如**定型数组（Typed Array）**，定型数组通过 ES API 向原生发送指令来控制内存。这些定型数组只能控制对应的 ElementType ，其名称也和元素类型相关。定型数组的类型名称为 ElementType + Array。定型数组操作方式类似于数组，以`Int32Array`为例：
 
 ```js
 // 申请一个长度为6（6位数）的int32
@@ -2697,7 +2697,7 @@ console.log(int32.length);                  // 6
 console.log(int32.buffer.byteLength);       // 24
 ```
 
-定型数组的操作类似数组，具体可以参考 [MDN 类型化数组](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Typed_arrays)。
+定型数组的操作类似数组，具体可以参考 [MDN 类型化数组](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Typed_arrays)和[`TypedArray`](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Global_Objects/TypedArray)。
 
 ### Map
 
